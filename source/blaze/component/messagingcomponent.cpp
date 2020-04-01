@@ -1,9 +1,13 @@
 
 // Include
 #include "messagingcomponent.h"
-#include "../client.h"
-#include "../../utils/functions.h"
-#include "../../utils/logger.h"
+
+#include "blaze/client.h"
+#include "blaze/functions.h"
+#include "utils/functions.h"
+
+#include "game/user.h"
+
 #include <iostream>
 
 /*
@@ -25,6 +29,19 @@
 			PYLD = 0x18
 			SRCE = 0x08
 			TIME = 0x38
+
+
+	Message types
+		0-2 = user message types
+		2 = playgroup, lobby & game message types
+
+		static var kMessageType_Tell = 0;
+		static var kMessageType_Party = 7;
+		static var kMessageType_Game = 8;
+		static var kMessageType_Lobby = 9;
+		static var kMessageType_System = 14;
+		static var kMessageType_Warning = 15;
+		static var kMessageType_SporeNetBroadcast = 16;
 */
 
 // Blaze
@@ -37,6 +54,7 @@ namespace Blaze {
 			case 0x03: OnPurgeMessages(client, header); break;
 			case 0x04: OnTouchMessages(client, header); break;
 			case 0x05: OnGetMessages(client, header);   break;
+
 			default:
 				logger::error("Unknown messaging command: " + header.command);
 				break;
@@ -44,44 +62,50 @@ namespace Blaze {
 	}
 
 	void MessagingComponent::OnSendMessageResponse(Client* client) {
-		TDF::Packet packet;
-		packet.PutInteger(nullptr, "MGID", 0);
-		{
-			auto& midsList = packet.CreateList(nullptr, "MIDS", TDF::Type::Integer);
-			packet.PutInteger(&midsList, "", 0);
+		ClientMessage message;
+		message.Read(client->get_request());
+
+		uint32_t id;
+		if (!message.attributes.empty()) {
+			id = message.attributes.begin()->first;
+		} else {
+			id = 0;
 		}
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
+		TDF::Packet packet;
+		packet.put_integer("MGID", id);
+		packet.push_list("MIDS", TDF::Type::Integer); // vector<uint32_t>
+		for (const auto& [id, _] : message.attributes) {
+			packet.put_integer("", id);
+		}
+		packet.pop();
 
-		Header header;
-		header.component = Component::Messaging;
-		header.command = 0x01;
-		header.error_code = 0;
+		NotifyMessage(client, message);
 
-		client->reply(std::move(header), outBuffer);
+		client->reply({
+			.component = Component::Messaging,
+			.command = 0x01
+		}, packet);
 	}
 
-	void MessagingComponent::NotifyMessage(Client* client) {
-		TDF::Packet packet;
-		packet.PutInteger(nullptr, "FLAG", 0);
-		packet.PutInteger(nullptr, "MGID", 0);
-		packet.PutString(nullptr, "NAME", "");
-		{
-			auto& pyldStruct = packet.CreateStruct(nullptr, "PYLD");
+	void MessagingComponent::NotifyMessage(Client* client, const ClientMessage& clientMessage) {
+		const auto& user = Game::UserManager::GetUserById(std::get<2>(clientMessage.target));
+		if (user) {
+			ServerMessage serverMessage;
+			serverMessage.flags = 0;
+			serverMessage.messageId = 1;
+			serverMessage.name = user->get_name();
+			serverMessage.time = static_cast<uint32_t>(utils::get_unix_time());
+			serverMessage.message = clientMessage;
+
+			TDF::Packet packet;
+			serverMessage.Write(packet);
+
+			client->notify({
+				.component = Component::Messaging,
+				.command = 0x01
+			}, packet);
 		}
-		packet.PutVector3(nullptr, "SRCE", 0, 0, 0);
-		packet.PutInteger(nullptr, "TIME", utils::get_unix_time());
-
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
-
-		Header header;
-		header.component = Component::Messaging;
-		header.command = 0x01;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
 	}
 
 	void MessagingComponent::OnSendMessage(Client* client, Header header) {
@@ -90,18 +114,18 @@ namespace Blaze {
 	}
 
 	void MessagingComponent::OnFetchMessages(Client* client, Header header) {
-		logger::error("OnFetchMessages");
+		logger::info("OnFetchMessages");
 	}
 
 	void MessagingComponent::OnPurgeMessages(Client* client, Header header) {
-		logger::error("OnPurgeMessages");
+		logger::info("OnPurgeMessages");
 	}
 
 	void MessagingComponent::OnTouchMessages(Client* client, Header header) {
-		logger::error("OnTouchMessages");
+		logger::info("OnTouchMessages");
 	}
 
 	void MessagingComponent::OnGetMessages(Client* client, Header header) {
-		logger::error("OnGetMessages");
+		logger::info("OnGetMessages");
 	}
 }

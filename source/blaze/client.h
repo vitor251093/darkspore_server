@@ -3,11 +3,21 @@
 #define _BLAZE_CLIENT_HEADER
 
 // Include
-#include "../network/client.h"
-#include "../game/user.h"
 #include "types.h"
 #include "tdf.h"
+
+#include "../network/client.h"
+#include "../game/user.h"
+
 #include <boost/asio/ssl.hpp>
+
+// ClientData
+struct ClientData {
+	std::string svcn;
+	Blaze::ClientType type;
+	uint32_t lang;
+	bool iito;
+};
 
 // Blaze
 namespace Blaze {
@@ -23,39 +33,41 @@ namespace Blaze {
 			const auto& get_user() const { return mUser; }
 			void set_user(const Game::UserPtr& user) { mUser = user; }
 
-			const auto& get_request() const { return mRequest; }
+			const auto& get_request() const { return mParser.GetDocument(); }
 
-			auto& type() { return mType; }
-			const auto& type() const { return mType; }
-
-			auto& localization() { return mLocalization; }
-			const auto& localization() const { return mLocalization; }
+			auto& data() { return mData; }
+			const auto& data() const { return mData; }
 
 			void start();
 
-			void send(const Header& header, const DataBuffer* buffer);
 			void notify(Header header, const DataBuffer& buffer);
 			void reply(Header header);
 			void reply(Header header, const DataBuffer& buffer);
+
+			//
+			void notify(Header&& header, const TDF::Packet& packet);
+			void reply(Header&& header, const TDF::Packet& packet);
+			//
 
 			void handle_handshake(const boost::system::error_code& error);
 			void handle_read(const boost::system::error_code& error, size_t bytes_transferred);
 			void handle_write(const boost::system::error_code& error);
 
 		private:
+			void send(const Header& header, const DataBuffer& buffer);
+
 			void parse_packets();
 
 		protected:
 			boost::asio::ssl::stream<boost::asio::ip::tcp::socket> mSocket;
 
-			rapidjson::Document mRequest;
+			TDF::Parser mParser;
 
 			std::vector<DataBuffer> mWriteBuffers;
 
 			Game::UserPtr mUser;
 
-			ClientType mType;
-			uint32_t mLocalization;
+			ClientData mData;
 			
 			uint32_t mCurrentMessageId;
 			uint32_t mId;

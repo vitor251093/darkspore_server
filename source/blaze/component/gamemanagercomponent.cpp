@@ -5,47 +5,14 @@
 #include "playgroupscomponent.h"
 
 #include "blaze/client.h"
-#include "game/game.h"
+#include "blaze/functions.h"
+#include "game/gamemanager.h"
 #include "utils/functions.h"
 #include "utils/logger.h"
 
 #include <iostream>
 
-/*
-	STAT
-		0 = Boot
-		1 = Login
-		2 = Moving towards editor (Spaceship any?)
-		3 = Squad/Hero screen
-		4 = Navigation/Spaceship
-		5 = Predungeon
-		6 = Unknown (cStateMachine in exe)
-		7 = Editor (cStateMachine in exe)
-		8 = Cinematic
-		9 = Spectator
-		10 = Replay
-		11 = Chain voting
-		12 = Chain cashout
-		13 = Game over
-		15 = Arena lobby
-		16 = Arena round results
-		17 = Juggernaut lobby
-		18 = Juggernaut results
-		19 = Killrace lobby
-		20 = Killrace results
-
-
-	Gamemodes
-		Tutorial = 1
-		Chain(Matched/Premade) = 2
-		Arena = 3
-		KillRace = 4
-		Juggernaut = 5
-		Quickplay = 6
-		DirectEntry = 7
-*/
-
-enum class PacketIDGameCommand : uint16_t
+enum class PacketIDGameCommand : uint16_t 
 {
 	CreateGame = 0x01,
 	DestroyGame = 0x02,
@@ -90,8 +57,41 @@ enum class PacketIDGameCommand : uint16_t
 	GetUserSetGameListSubscription = 0x6F,
 	RegisterDynamicDedicatedServerCreator = 0x96,
 	UnregisterDynamicDedicatedServerCreator = 0x97
-};
+}; 
+
 /*
+	STAT
+		0 = Boot
+		1 = Login
+		2 = Moving towards editor (Spaceship any?)
+		3 = Squad/Hero screen
+		4 = Navigation/Spaceship
+		5 = Predungeon
+		6 = Unknown (cStateMachine in exe)
+		7 = Editor (cStateMachine in exe)
+		8 = Cinematic
+		9 = Spectator
+		10 = Replay
+		11 = Chain voting
+		12 = Chain cashout
+		13 = Game over
+		15 = Arena lobby
+		16 = Arena round results
+		17 = Juggernaut lobby
+		18 = Juggernaut results
+		19 = Killrace lobby
+		20 = Killrace results
+
+
+	Gamemodes
+		Tutorial = 1
+		Chain(Matched/Premade) = 2
+		Arena = 3
+		KillRace = 4
+		Juggernaut = 5
+		Quickplay = 6
+		DirectEntry = 7
+
 	Notification Packet IDs
 		0x0A = NotifyMatchmakingFailed
 		0x0C = NotifyMatchmakingAsyncStatus
@@ -323,13 +323,16 @@ namespace Blaze {
 	void GameManagerComponent::Parse(Client* client, const Header& header) {
 		switch ((PacketIDGameCommand)header.command) {
 			case PacketIDGameCommand::CreateGame:           CreateGame(client, header);           break;
-			case PacketIDGameCommand::JoinGame:             JoinGame(client, header);             break;
-			case PacketIDGameCommand::RemovePlayer:         RemovePlayer(client, header);         break;
+			case PacketIDGameCommand::DestroyGame:          DestroyGame(client, header);          break;
+			case PacketIDGameCommand::SetPlayerAttributes:  SetPlayerAttributes(client, header);  break;
+			case PacketIDGameCommand::JoinGame:  			JoinGame(client, header);         	  break;
+			case PacketIDGameCommand::RemovePlayer:  		RemovePlayer(client, header);         break;
 			case PacketIDGameCommand::StartMatchmaking:     StartMatchmaking(client, header);     break;
 			case PacketIDGameCommand::CancelMatchmaking:    CancelMatchmaking(client, header);    break;
 			case PacketIDGameCommand::FinalizeGameCreation: FinalizeGameCreation(client, header); break;
 			case PacketIDGameCommand::ResetDedicatedServer: ResetDedicatedServer(client, header); break;
-			case PacketIDGameCommand::UpdateMeshConnection: UpdateMeshConnection(client, header); break;
+			case PacketIDGameCommand::UpdateMeshConnection: UpdateMeshConnection(client, header); break; 
+
 			default:
 				logger::error("Unknown gamemanager command: " + header.command);
 				break;
@@ -381,23 +384,89 @@ namespace Blaze {
 		client->reply(std::move(header), outBuffer);
 	}
 
-	void GameManagerComponent::NotifyGameCreated(Client* client, uint32_t gameId) {
+	void GameManagerComponent::SendCancelMatchmaking(Client* client, uint32_t id) {
 		TDF::Packet packet;
-		packet.PutInteger(nullptr, "GID", gameId);
+		packet.PutInteger(nullptr, "MSID", id);
 
 		DataBuffer outBuffer;
 		packet.Write(outBuffer);
 
 		Header header;
 		header.component = Component::GameManager;
-		header.command = (int)PacketIDGameCommand::FinalizeGameCreation;
+		header.command = 0x0E;
+		header.error_code = 0;
+
+		client->reply(std::move(header), outBuffer);
+	}
+
+	void GameManagerComponent::NotifyMatchmakingFailed(Client* client, uint32_t id, MatchmakingResult result) {
+		const auto& user = client->get_user();
+
+		TDF::Packet packet;
+		packet.PutInteger(nullptr, "MAXF", 0);
+		packet.PutInteger(nullptr, "MSID", id);
+		packet.PutInteger(nullptr, "RSLT", result);
+		packet.PutInteger(nullptr, "USID", user->get_id());
+
+		DataBuffer outBuffer;
+		packet.Write(outBuffer);
+
+		Header header;
+		header.component = Component::GameManager;
+		header.command = 0x0A;
 		header.error_code = 0;
 
 		client->notify(std::move(header), outBuffer);
 	}
 
-	void GameManagerComponent::NotifyGameRemoved(Client* client) {
+	void GameManagerComponent::NotifyMatchmakingAsyncStatus(Client* client, uint32_t id) {
+		const auto& user = client->get_user();
 
+		TDF::Packet packet;
+		{
+			auto& asyncInfoList = packet.CreateList(nullptr, "ASIL", TDF::Type::String);
+		}
+		packet.PutInteger(nullptr, "MSID", id);
+		packet.PutInteger(nullptr, "USID", user->get_id());
+
+		/*
+		873a6c00 - ASIL
+
+			b73a6400 - MSID
+
+			d73a6400 - USID
+			*/
+
+		DataBuffer outBuffer;
+		packet.Write(outBuffer);
+
+		Header header;
+		header.component = Component::GameManager;
+		header.command = 0x0C;
+		header.error_code = 0;
+
+		client->notify(std::move(header), outBuffer);
+	}
+
+	void GameManagerComponent::NotifyGameCreated(Client* client, uint32_t gameId) {
+		TDF::Packet packet;
+		packet.put_integer("GID", gameId);
+
+		client->notify({
+			.component = Component::GameManager,
+			.command = 0x0F
+		}, packet);
+	}
+
+	void GameManagerComponent::NotifyGameRemoved(Client* client, uint32_t gameId, DestroyGameReason reason) {
+		TDF::Packet packet;
+		packet.put_integer("GID", gameId);
+		packet.put_integer("REAS", reason);
+
+		client->notify({
+			.component = Component::GameManager,
+			.command = 0x10
+		}, packet);
 	}
 
 	void GameManagerComponent::NotifyGameSetup(Client* client) {
@@ -416,10 +485,15 @@ namespace Blaze {
 			return;
 		}
 
-		const auto& gameInfo = user->get_game_info();
-		if (!gameInfo) {
+		const auto& game = user->get_game();
+		if (!game) {
 			return;
 		}
+
+		auto clientId = client->get_id();
+
+		auto gameId = game->GetId();
+		const auto& gameInfo = game->GetInfo();
 
 		bool gameIgnore = request["IGNO"].GetUint();
 		std::string playgroupId = request["PGID"].GetString();
@@ -433,25 +507,25 @@ namespace Blaze {
 			auto& gameStruct = packet.CreateStruct(nullptr, "GAME");
 			{
 				auto& admnList = packet.CreateList(&gameStruct, "ADMN", TDF::Type::Integer);
-				packet.PutInteger(&admnList, "", 1);
+				packet.PutInteger(&admnList, "", clientId);
 			} {
 				auto& attrMap = packet.CreateMap(&gameStruct, "ATTR", TDF::Type::String, TDF::Type::String);
-				for (const auto& [key, value] : gameInfo->attributes) {
+				for (const auto& [key, value] : gameInfo.attributes) {
 					packet.PutString(&attrMap, key, value);
 				}
 			} {
-				auto& capList = packet.CreateList(&gameStruct, "CAP", TDF::Type::Integer);
-				for (auto value : gameInfo->capacity) {
+				auto& capList = packet.CreateList(&gameStruct, "CAP", TDF::Type::Integer); // u16 list?
+				for (auto value : gameInfo.capacity) {
 					packet.PutInteger(&capList, "", value);
 				}
 			}
-			packet.PutInteger(&gameStruct, "GID", gameInfo->id);
-			packet.PutString(&gameStruct, "GNAM", gameInfo->name);
+			packet.PutInteger(&gameStruct, "GID", gameId);
+			packet.PutString(&gameStruct, "GNAM", gameInfo.name);
 			packet.PutInteger(&gameStruct, "GPVH", 1);
-			packet.PutInteger(&gameStruct, "GSET", gameInfo->settings);
+			packet.PutInteger(&gameStruct, "GSET", gameInfo.settings);
 			packet.PutInteger(&gameStruct, "GSID", 1);
-			packet.PutInteger(&gameStruct, "GSTA", gameInfo->state);
-			packet.PutString(&gameStruct, "GTYP", gameInfo->type);
+			packet.PutInteger(&gameStruct, "GSTA", gameInfo.state);
+			packet.PutString(&gameStruct, "GTYP", gameInfo.type);
 			{
 				auto& hnetList = packet.CreateList(&gameStruct, "HNET", TDF::Type::Struct, true);
 				{
@@ -459,61 +533,61 @@ namespace Blaze {
 					auto& valuStruct = packet.CreateStruct(&hnetList, "");
 					{
 						auto& exipStruct = packet.CreateStruct(&valuStruct, "EXIP");
-						packet.PutInteger(&exipStruct, "IP", gameInfo->externalIP.address);
-						packet.PutInteger(&exipStruct, "PORT", gameInfo->externalIP.port);
+						packet.PutInteger(&exipStruct, "IP", gameInfo.externalIP.address);
+						packet.PutInteger(&exipStruct, "PORT", gameInfo.externalIP.port);
 					} {
 						auto& inipStruct = packet.CreateStruct(&valuStruct, "INIP");
-						packet.PutInteger(&inipStruct, "IP", gameInfo->internalIP.address);
-						packet.PutInteger(&inipStruct, "PORT", gameInfo->internalIP.port);
+						packet.PutInteger(&inipStruct, "IP", gameInfo.internalIP.address);
+						packet.PutInteger(&inipStruct, "PORT", gameInfo.internalIP.port);
 					}
 #else
 					auto& hnetMemberUnion = packet.CreateUnion(&hnetList, "", NetworkAddressMember::IpPairAddress);
 					auto& valuStruct = packet.CreateStruct(&hnetMemberUnion, "VALU");
 					{
 						auto& exipStruct = packet.CreateStruct(&valuStruct, "EXIP");
-						packet.PutInteger(&exipStruct, "IP", gameInfo->externalIP.address);
-						packet.PutInteger(&exipStruct, "PORT", gameInfo->externalIP.port);
+						packet.PutInteger(&exipStruct, "IP", gameInfo.externalIP.address);
+						packet.PutInteger(&exipStruct, "PORT", gameInfo.externalIP.port);
 					} {
 						auto& inipStruct = packet.CreateStruct(&valuStruct, "INIP");
-						packet.PutInteger(&inipStruct, "IP", gameInfo->internalIP.address);
-						packet.PutInteger(&inipStruct, "PORT", gameInfo->internalIP.port);
+						packet.PutInteger(&inipStruct, "IP", gameInfo.internalIP.address);
+						packet.PutInteger(&inipStruct, "PORT", gameInfo.internalIP.port);
 					}
 #endif
 				}
 			}
 			packet.PutInteger(&gameStruct, "HSES", 13666);
 			packet.PutInteger(&gameStruct, "IGNO", gameIgnore);
-			packet.PutInteger(&gameStruct, "MCAP", 1);
+			packet.PutInteger(&gameStruct, "MCAP", gameInfo.maxPlayers);
 			{
 				auto& nqosStruct = packet.CreateStruct(&gameStruct, "NQOS");
 				packet.PutInteger(&nqosStruct, "DBPS", 100);
 				packet.PutInteger(&nqosStruct, "NATT", NatType::Open);
 				packet.PutInteger(&nqosStruct, "UBPS", 100);
 			}
-			packet.PutInteger(&gameStruct, "NRES", gameInfo->resetable ? 0 : 1);
-			packet.PutInteger(&gameStruct, "NTOP", gameInfo->networkTopology);
+			packet.PutInteger(&gameStruct, "NRES", gameInfo.resetable ? 0 : 1);
+			packet.PutInteger(&gameStruct, "NTOP", gameInfo.networkTopology);
 			packet.PutString(&gameStruct, "PGID", playgroupId); // b6852db1-ba37-4b40-aea3-0bd16efba4f9
 			packet.PutBlob(&gameStruct, "PGSR", nullptr, 0);
 			{
 				auto& phstStruct = packet.CreateStruct(&gameStruct, "PHST");
-				packet.PutInteger(&phstStruct, "HPID", 1);
+				packet.PutInteger(&phstStruct, "HPID", user->get_id()); // host player id?
 				packet.PutInteger(&phstStruct, "HSLT", 1);
 			}
-			packet.PutInteger(&gameStruct, "PRES", gameInfo->presenceMode);
+			packet.PutInteger(&gameStruct, "PRES", gameInfo.presenceMode);
 			packet.PutString(&gameStruct, "PSAS", "ams");
-			packet.PutInteger(&gameStruct, "QCAP", gameInfo->queueCapacity);
+			packet.PutInteger(&gameStruct, "QCAP", gameInfo.queueCapacity);
 			packet.PutInteger(&gameStruct, "SEED", 0);
 			packet.PutInteger(&gameStruct, "TCAP", tCap);
 			{
 				auto& thstStruct = packet.CreateStruct(&gameStruct, "THST");
-				packet.PutInteger(&thstStruct, "HPID", gameInfo->id);
+				packet.PutInteger(&thstStruct, "HPID", gameId);
 				packet.PutInteger(&thstStruct, "HSLT", 0);
 			} {
-				auto& tidsList = packet.CreateList(&gameStruct, "TIDS", TDF::Type::Integer);
+				auto& tidsList = packet.CreateList(&gameStruct, "TIDS", TDF::Type::Integer); // u16 list?
 				packet.PutInteger(&tidsList, "", 0);
 			}
 			packet.PutString(&gameStruct, "UUID", "71bc4bdb-82ec-494d-8d75-ca5123b827ac"); // 714b05dc-93bc-49ac-961c-cb38b574f30a
-			packet.PutInteger(&gameStruct, "VOIP", gameInfo->voipTopology);
+			packet.PutInteger(&gameStruct, "VOIP", gameInfo.voipTopology);
 			packet.PutString(&gameStruct, "VSTR", versionString);
 			packet.PutBlob(&gameStruct, "XNNC", nullptr, 0);
 			packet.PutBlob(&gameStruct, "XSES", nullptr, 0);
@@ -523,8 +597,8 @@ namespace Blaze {
 				auto& playerStruct = packet.CreateStruct(&prosList, "");
 				packet.PutBlob(&playerStruct, "BLOB", nullptr, 0);
 				packet.PutInteger(&playerStruct, "EXID", 0);
-				packet.PutInteger(&playerStruct, "GID", gameInfo->id);
-				packet.PutInteger(&playerStruct, "LOC", client->localization());
+				packet.PutInteger(&playerStruct, "GID", gameId);
+				packet.PutInteger(&playerStruct, "LOC", client->data().lang);
 				packet.PutString(&playerStruct, "NAME", user->get_name());
 				{
 					// PATT
@@ -535,12 +609,12 @@ namespace Blaze {
 					auto& valuStruct = packet.CreateStruct(&pnetUnion, "VALU");
 					{
 						auto& exipStruct = packet.CreateStruct(&valuStruct, "INIP");
-						packet.PutInteger(&exipStruct, "IP", gameInfo->internalIP.address);
-						packet.PutInteger(&exipStruct, "PORT", gameInfo->internalIP.port);
+						packet.PutInteger(&exipStruct, "IP", gameInfo.internalIP.address);
+						packet.PutInteger(&exipStruct, "PORT", gameInfo.internalIP.port);
 					} {
 						auto& inipStruct = packet.CreateStruct(&valuStruct, "EXIP");
-						packet.PutInteger(&inipStruct, "IP", gameInfo->externalIP.address);
-						packet.PutInteger(&inipStruct, "PORT", gameInfo->externalIP.port);
+						packet.PutInteger(&inipStruct, "IP", gameInfo.externalIP.address);
+						packet.PutInteger(&inipStruct, "PORT", gameInfo.externalIP.port);
 					}
 				}
 				packet.PutInteger(&playerStruct, "SID", 0);
@@ -548,7 +622,7 @@ namespace Blaze {
 				packet.PutInteger(&playerStruct, "STAT", PlayerState::Connected);
 				packet.PutInteger(&playerStruct, "TIDX", 0xFFFF);
 				packet.PutInteger(&playerStruct, "TIME", utils::get_unix_time());
-				packet.PutVector3(&playerStruct, "UGID", 0, 0, 0);
+				packet.PutObjectId(&playerStruct, "UGID", 0, 0, 0);
 				packet.PutInteger(&playerStruct, "UID", client->get_id());
 			}
 		} {
@@ -577,20 +651,22 @@ namespace Blaze {
 			return;
 		}
 
-		const auto& gameInfo = Game::Manager::GetGame(gameId);
-		if (!gameInfo) {
+		const auto& game = Game::GameManager::GetGame(gameId);
+		if (!game) {
 			return;
 		}
 
-		user->set_game_info(gameInfo);
+		user->set_game(game);
+
+		const auto& gameInfo = game->GetInfo();
 
 		TDF::Packet packet;
-		packet.PutInteger(nullptr, "GID", gameInfo->id);
+		packet.PutInteger(nullptr, "GID", game->GetId());
 		{
 			auto& pdatStruct = packet.CreateStruct(nullptr, "PDAT");
 			packet.PutBlob(&pdatStruct, "BLOB", nullptr, 0);
 			packet.PutInteger(&pdatStruct, "EXID", 0);
-			packet.PutInteger(&pdatStruct, "LOC", client->localization());
+			packet.PutInteger(&pdatStruct, "LOC", client->data().lang);
 			packet.PutString(&pdatStruct, "NAME", user->get_name());
 			{
 				auto& pattMap = packet.CreateMap(&pdatStruct, "PATT", TDF::Type::String, TDF::Type::String);
@@ -602,12 +678,12 @@ namespace Blaze {
 				auto& valuStruct = packet.CreateStruct(&pnetUnion, "VALU");
 				{
 					auto& inipStruct = packet.CreateStruct(&valuStruct, "INIP");
-					packet.PutInteger(&inipStruct, "IP", gameInfo->internalIP.address);
-					packet.PutInteger(&inipStruct, "PORT", gameInfo->internalIP.port);
+					packet.PutInteger(&inipStruct, "IP", gameInfo.internalIP.address);
+					packet.PutInteger(&inipStruct, "PORT", gameInfo.internalIP.port);
 				} {
 					auto& exipStruct = packet.CreateStruct(&valuStruct, "EXIP");
-					packet.PutInteger(&exipStruct, "IP", gameInfo->externalIP.address);
-					packet.PutInteger(&exipStruct, "PORT", gameInfo->externalIP.port);
+					packet.PutInteger(&exipStruct, "IP", gameInfo.externalIP.address);
+					packet.PutInteger(&exipStruct, "PORT", gameInfo.externalIP.port);
 				}
 			}
 			packet.PutInteger(&pdatStruct, "SID", 0);
@@ -615,7 +691,7 @@ namespace Blaze {
 			packet.PutInteger(&pdatStruct, "STAT", PlayerState::Connected);
 			packet.PutInteger(&pdatStruct, "TIDX", 0xFFFF);
 			packet.PutInteger(&pdatStruct, "TIME", utils::get_unix_time());
-			packet.PutVector3(&pdatStruct, "UGID", 0, 0, 0);
+			packet.PutObjectId(&pdatStruct, "UGID", 0, 0, 0);
 			packet.PutInteger(&pdatStruct, "UID", client->get_id());
 		}
 
@@ -704,10 +780,12 @@ namespace Blaze {
 			return;
 		}
 
-		const auto& gameInfo = user->get_game_info();
-		if (!gameInfo) {
+		const auto& game = user->get_game();
+		if (!game) {
 			return;
 		}
+
+		const auto& gameInfo = game->GetInfo();
 
 		bool gameIgnore = request["IGNO"].GetUint();
 		uint32_t tCap = request["TCAP"].GetUint();
@@ -721,55 +799,55 @@ namespace Blaze {
 				packet.PutInteger(&admnList, "", 1);
 			} {
 				auto& attrMap = packet.CreateMap(&dataStruct, "ATTR", TDF::Type::String, TDF::Type::String);
-				for (const auto& [key, value] : gameInfo->attributes) {
+				for (const auto& [key, value] : gameInfo.attributes) {
 					packet.PutString(&attrMap, key, value);
 				}
 			} {
 				auto& capList = packet.CreateList(&dataStruct, "CAP", TDF::Type::Integer);
-				for (auto value : gameInfo->capacity) {
+				for (auto value : gameInfo.capacity) {
 					packet.PutInteger(&capList, "", value);
 				}
 			}
-			packet.PutInteger(&dataStruct, "GID", gameInfo->id);
-			packet.PutString(&dataStruct, "GNAM", gameInfo->name);
+			packet.PutInteger(&dataStruct, "GID", game->GetId());
+			packet.PutString(&dataStruct, "GNAM", gameInfo.name);
 			packet.PutInteger(&dataStruct, "GPVH", 1);
-			packet.PutInteger(&dataStruct, "GSET", gameInfo->settings);
+			packet.PutInteger(&dataStruct, "GSET", gameInfo.settings);
 			packet.PutInteger(&dataStruct, "GSID", 1);
-			packet.PutInteger(&dataStruct, "GSTA", gameInfo->state);
-			packet.PutString(&dataStruct, "GTYP", gameInfo->type);
+			packet.PutInteger(&dataStruct, "GSTA", gameInfo.state);
+			packet.PutString(&dataStruct, "GTYP", gameInfo.type);
 			{
 				auto& hnetList = packet.CreateList(&dataStruct, "HNET", TDF::Type::Struct, true);
 				{
 					auto& inipStruct = packet.CreateStruct(&hnetList, "");
-					packet.PutInteger(&inipStruct, "IP", gameInfo->internalIP.address);
-					packet.PutInteger(&inipStruct, "PORT", gameInfo->internalIP.port);
+					packet.PutInteger(&inipStruct, "IP", gameInfo.internalIP.address);
+					packet.PutInteger(&inipStruct, "PORT", gameInfo.internalIP.port);
 				} {
 					auto& exipStruct = packet.CreateStruct(&hnetList, "");
-					packet.PutInteger(&exipStruct, "IP", gameInfo->externalIP.address);
-					packet.PutInteger(&exipStruct, "PORT", gameInfo->externalIP.port);
+					packet.PutInteger(&exipStruct, "IP", gameInfo.externalIP.address);
+					packet.PutInteger(&exipStruct, "PORT", gameInfo.externalIP.port);
 				}
 			}
 			packet.PutInteger(&dataStruct, "HSES", 0);
 			packet.PutInteger(&dataStruct, "IGNO", gameIgnore);
-			packet.PutInteger(&dataStruct, "MCAP", 1);
+			packet.PutInteger(&dataStruct, "MCAP", gameInfo.maxPlayers);
 			{
 				auto& nqosStruct = packet.CreateStruct(&dataStruct, "NQOS");
-				packet.PutInteger(&nqosStruct, "DBPS", 100);
+				packet.PutInteger(&nqosStruct, "DBPS", 0);
 				packet.PutInteger(&nqosStruct, "NATT", NatType::Open);
-				packet.PutInteger(&nqosStruct, "UBPS", 100);
+				packet.PutInteger(&nqosStruct, "UBPS", 0);
 			}
-			packet.PutInteger(&dataStruct, "NRES", gameInfo->resetable ? 0 : 1);
-			packet.PutInteger(&dataStruct, "NTOP", gameInfo->networkTopology);
+			packet.PutInteger(&dataStruct, "NRES", gameInfo.resetable ? 0 : 1);
+			packet.PutInteger(&dataStruct, "NTOP", gameInfo.networkTopology);
 			packet.PutString(&dataStruct, "PGID", "d4c9d072-24d7-4142-b648-b43c8fe97b4d"); // b6852db1-ba37-4b40-aea3-0bd16efba4f9
 			packet.PutBlob(&dataStruct, "PGSR", nullptr, 0);
 			{
 				auto& phstStruct = packet.CreateStruct(&dataStruct, "PHST");
-				packet.PutInteger(&phstStruct, "HPID", 1);
-				packet.PutInteger(&phstStruct, "HSLT", 1);
+				packet.PutInteger(&phstStruct, "HPID", user->get_id()); // blaze id? i64
+				packet.PutInteger(&phstStruct, "HSLT", 1); // host slot? u8
 			}
-			packet.PutInteger(&dataStruct, "PRES", gameInfo->presenceMode);
+			packet.PutInteger(&dataStruct, "PRES", gameInfo.presenceMode);
 			packet.PutString(&dataStruct, "PSAS", "ams");
-			packet.PutInteger(&dataStruct, "QCAP", gameInfo->queueCapacity);
+			packet.PutInteger(&dataStruct, "QCAP", gameInfo.queueCapacity);
 			packet.PutInteger(&dataStruct, "SEED", 1);
 			packet.PutInteger(&dataStruct, "TCAP", tCap);
 			{
@@ -781,7 +859,7 @@ namespace Blaze {
 				packet.PutInteger(&tidsList, "", 1);
 			}
 			packet.PutString(&dataStruct, "UUID", "71bc4bdb-82ec-494d-8d75-ca5123b827ac"); // 714b05dc-93bc-49ac-961c-cb38b574f30a
-			packet.PutInteger(&dataStruct, "VOIP", gameInfo->voipTopology);
+			packet.PutInteger(&dataStruct, "VOIP", gameInfo.voipTopology);
 			packet.PutString(&dataStruct, "VSTR", versionString);
 			packet.PutBlob(&dataStruct, "XNNC", nullptr, 0);
 			packet.PutBlob(&dataStruct, "XSES", nullptr, 0);
@@ -842,10 +920,12 @@ namespace Blaze {
 			return;
 		}
 
-		const auto& gameInfo = user->get_game_info();
-		if (!gameInfo) {
+		const auto& game = user->get_game();
+		if (!game) {
 			return;
 		}
+
+		const auto& gameInfo = game->GetInfo();
 
 		std::string gameCtr = request["GCTR"].GetString();
 		std::string gameUrl = request["GURL"].GetString();
@@ -870,42 +950,42 @@ namespace Blaze {
 				packet.PutInteger(&admnList, "", 1);
 			} {
 				auto& attrMap = packet.CreateMap(&greqStruct, "ATTR", TDF::Type::String, TDF::Type::String);
-				for (const auto& [key, value] : gameInfo->attributes) {
+				for (const auto& [key, value] : gameInfo.attributes) {
 					packet.PutString(&attrMap, key, value);
 				}
 			}
-			packet.PutVector3(&greqStruct, "BTPL", 1, 1, 1);
+			packet.PutObjectId(&greqStruct, "BTPL", 0, 0, 0);
 			packet.PutString(&greqStruct, "GCTR", gameCtr);
-			packet.PutString(&greqStruct, "GNAM", gameInfo->name);
-			packet.PutInteger(&greqStruct, "GSET", gameInfo->settings);
-			packet.PutString(&greqStruct, "GTYP", gameInfo->type);
+			packet.PutString(&greqStruct, "GNAM", gameInfo.name);
+			packet.PutInteger(&greqStruct, "GSET", gameInfo.settings);
+			packet.PutString(&greqStruct, "GTYP", gameInfo.type);
 			packet.PutString(&greqStruct, "GURL", gameUrl);
 			{
 				auto& hnetList = packet.CreateList(&greqStruct, "HNET", TDF::Type::Struct, true);
 				{
 					auto& exipStruct = packet.CreateStruct(&hnetList, "");
-					packet.PutInteger(&exipStruct, "IP", gameInfo->externalIP.address);
-					packet.PutInteger(&exipStruct, "PORT", gameInfo->externalIP.port);
+					packet.PutInteger(&exipStruct, "IP", gameInfo.externalIP.address);
+					packet.PutInteger(&exipStruct, "PORT", gameInfo.externalIP.port);
 				} {
 					auto& inipStruct = packet.CreateStruct(&hnetList, "");
-					packet.PutInteger(&inipStruct, "IP", gameInfo->internalIP.address);
-					packet.PutInteger(&inipStruct, "PORT", gameInfo->internalIP.port);
+					packet.PutInteger(&inipStruct, "IP", gameInfo.internalIP.address);
+					packet.PutInteger(&inipStruct, "PORT", gameInfo.internalIP.port);
 				}
 			}
 			packet.PutInteger(&greqStruct, "IGNO", gameIgnore);
-			packet.PutInteger(&greqStruct, "NRES", gameInfo->resetable ? 0 : 1);
-			packet.PutInteger(&greqStruct, "NTOP", static_cast<uint32_t>(gameInfo->networkTopology));
+			packet.PutInteger(&greqStruct, "NRES", gameInfo.resetable ? 0 : 1);
+			packet.PutInteger(&greqStruct, "NTOP", gameInfo.networkTopology);
 			packet.PutString(&greqStruct, "PGID", playgroupId);
 			packet.PutBlob(&greqStruct, "PGSC", nullptr, 0);
 			{
 				auto& pcapList = packet.CreateList(&greqStruct, "PCAP", TDF::Type::Integer);
-				for (auto value : gameInfo->capacity) {
+				for (auto value : gameInfo.capacity) {
 					packet.PutInteger(&pcapList, "", value);
 				}
 			}
-			packet.PutInteger(&greqStruct, "PMAX", gameInfo->maxPlayers);
-			packet.PutInteger(&greqStruct, "PRES", static_cast<uint32_t>(gameInfo->presenceMode));
-			packet.PutInteger(&greqStruct, "QCAP", gameInfo->queueCapacity);
+			packet.PutInteger(&greqStruct, "PMAX", gameInfo.maxPlayers);
+			packet.PutInteger(&greqStruct, "PRES", gameInfo.presenceMode);
+			packet.PutInteger(&greqStruct, "QCAP", gameInfo.queueCapacity);
 			packet.PutInteger(&greqStruct, "RGID", rgId);
 			{
 				auto& sidlList = packet.CreateList(&greqStruct, "SIDL", TDF::Type::Integer);
@@ -921,7 +1001,7 @@ namespace Blaze {
 				packet.PutInteger(&tidsList, "", 1);
 			}
 			packet.PutInteger(&greqStruct, "TIDX", tidx);
-			packet.PutInteger(&greqStruct, "VOIP", static_cast<uint32_t>(gameInfo->voipTopology));
+			packet.PutInteger(&greqStruct, "VOIP", gameInfo.voipTopology);
 			packet.PutString(&greqStruct, "VSTR", versionString);
 		}
 		packet.PutString(nullptr, "MID", "1");
@@ -944,14 +1024,38 @@ namespace Blaze {
 		NotifyGameSetup(client);
 	}
 
-	void GameManagerComponent::JoinGame(Client* client, Header header) {
+	void GameManagerComponent::DestroyGame(Client* client, Header header) {
+		const auto& request = client->get_request();
+
+		auto gameId = request["GID"].GetUint();
+		auto reason = static_cast<DestroyGameReason>(request["REAS"].GetUint());
+		NotifyGameRemoved(client, gameId, reason);
+
+		TDF::Packet packet;
+		packet.put_integer("GID", gameId);
+
+		header.error_code = 0;
+		client->reply(std::move(header), packet);
+	}
+
+	void GameManagerComponent::SetPlayerAttributes(Client* client, Header header) {
 		auto& request = client->get_request();
+
+		std::cout << "SetPlayerAttributes" << std::endl;
+
+		header.error_code = 0;
+		client->reply(std::move(header));
+	}
+
+	void GameManagerComponent::JoinGame(Client* client, Header header) {
+		const auto& request = client->get_request();
+		const auto& user = client->get_user();
 
 		uint32_t gameId = request["GID"].GetUint();
 		SendJoinGame(client, gameId);
 
-		UserSessionComponent::NotifyUserAdded(client, 1, "Dalkon");
-		UserSessionComponent::NotifyUserUpdated(client, 1);
+		UserSessionComponent::NotifyUserAdded(client, user->get_id(), user->get_name());
+		UserSessionComponent::NotifyUserUpdated(client, user->get_id());
 
 		PlaygroupsComponent::NotifyJoinPlaygroup(client);
 
@@ -976,7 +1080,9 @@ namespace Blaze {
 	}
 
 	void GameManagerComponent::CancelMatchmaking(Client* client, Header header) {
-		// SendStartMatchmaking(client, 1);
+		SendCancelMatchmaking(client, 1);
+
+		NotifyMatchmakingFailed(client, 1, MatchmakingResult::Cancelled);
 	}
 
 	void GameManagerComponent::FinalizeGameCreation(Client* client, Header header) {
@@ -985,18 +1091,23 @@ namespace Blaze {
 			return;
 		}
 
-		const auto& gameInfo = user->get_game_info();
-		if (!gameInfo) {
-			return;
+		auto game = user->get_game();
+		if (game) {
+			Game::GameManager::StartGame(game->GetId());
 		}
-
-		Game::Manager::StartGame(gameInfo->id);
 
 		header.error_code = 0;
 		client->reply(std::move(header));
 	}
 
 	void GameManagerComponent::ResetDedicatedServer(Client* client, Header header) {
+		/*
+			GSET flags
+				1024 = pvp
+				256 = unknown (seemingly always used)
+				4 = unknown (seemingly always used)
+		*/
+
 		/*
 # failed to start a level (may be used in other cases) - GMS
 0x1e5bc0a4 Unable to start planet. Returning to ship. (THIS IS THE CURRENT PROBLEM)
@@ -1012,67 +1123,84 @@ namespace Blaze {
 0x00040004 Unable to start planet. Returning to ship.
 		*/
 
-		auto& request = client->get_request();
+		// sub_C2EA10
 
 		const auto& user = client->get_user();
 		if (!user) {
 			return;
 		}
 
-		auto gameInfo = Game::Manager::CreateGame();
-		user->set_game_info(gameInfo);
+		auto game = Game::GameManager::CreateGame();
+		if (!game) {
+			// Should never happen?
+			return;
+		}
+
+		user->set_game(game);
+
+		auto gameId = game->GetId();
+		auto& gameInfo = game->GetInfo();
+
+		const auto& request = client->get_request();
 
 		// Attributes
 		for (const auto& attribute : request["ATTR"]["_Content"].GetObject()) {
-			gameInfo->attributes.emplace(attribute.name.GetString(), attribute.value.GetString());
+			gameInfo.attributes.emplace(attribute.name.GetString(), attribute.value.GetString());
 		}
 
 		// Capacity
 		for (const auto& capacity : request["PCAP"]["_Content"].GetArray()) {
-			gameInfo->capacity.push_back(capacity.GetUint());
+			gameInfo.capacity.push_back(capacity.GetUint());
 		}
 
 		// IPs
 		const auto& hnetData = request["HNET"]["_Content"];
-		gameInfo->internalIP = {
+		gameInfo.internalIP = {
 			.address = hnetData[0]["IP"].GetUint(),
 			.port = static_cast<uint16_t>(hnetData[0]["PORT"].GetUint())
 		};
 
-		gameInfo->externalIP = {
+		gameInfo.externalIP = {
 			.address = hnetData[1]["IP"].GetUint(),
 			.port = static_cast<uint16_t>(hnetData[1]["PORT"].GetUint())
 		};
 
 		// Other
-		gameInfo->name = request["GNAM"].GetString();
-		gameInfo->type = request["GTYP"].GetString();
+		gameInfo.name = request["GNAM"].GetString();
+		gameInfo.type = request["GTYP"].GetString();
 
-		gameInfo->settings = request["GSET"].GetUint64();
+		gameInfo.settings = request["GSET"].GetUint64();
 
-		gameInfo->presenceMode = static_cast<PresenceMode>(request["PRES"].GetUint());
-		gameInfo->state = GameState::Initializing;
-		gameInfo->networkTopology = static_cast<GameNetworkTopology>(request["NTOP"].GetUint());
-		gameInfo->voipTopology = static_cast<VoipTopology>(request["VOIP"].GetUint());
+		gameInfo.ignore = request["IGNO"].GetUint() != 0;
 
-		gameInfo->maxPlayers = request["PMAX"].GetUint();
-		gameInfo->queueCapacity = request["QCAP"].GetUint();
+		gameInfo.presenceMode = static_cast<PresenceMode>(request["PRES"].GetUint());
+		gameInfo.state = GameState::Initializing;
+		gameInfo.networkTopology = static_cast<GameNetworkTopology>(request["NTOP"].GetUint());
+		gameInfo.voipTopology = static_cast<VoipTopology>(request["VOIP"].GetUint());
 
-		gameInfo->resetable = request["NRES"].GetUint() != 0;
+		gameInfo.maxPlayers = std::max<uint16_t>(1, request["PMAX"].GetUint());
+		gameInfo.queueCapacity = request["QCAP"].GetUint();
+
+		gameInfo.resetable = request["NRES"].GetUint() != 0;
 
 		/////////////////
 
-		SendCreateGame(client, gameInfo->id);
-		// SendStartMatchmaking(client, gameInfo->id);
-		
-		// NotifyCreateDynamicDedicatedServerGame(client);
-		// NotifyGameCreated(client);
-		NotifyGameStateChange(client, gameInfo->id, gameInfo->state);
-		NotifyGameSetup(client);
-		// NotifyGameReset(client);
+#if 0 // current "ok" version
+		SendCreateGame(client, gameId);
 
-		// NotifyPlayerJoining(client, gameInfo->id);
-		// NotifyPlayerJoinCompleted(client, gameInfo->id);
+		NotifyGameStateChange(client, gameId, gameInfo.state);
+		NotifyGameSetup(client);
+#else
+		SendCreateGame(client, gameId);
+
+		NotifyGameCreated(client, gameId);
+		NotifyCreateDynamicDedicatedServerGame(client);
+		NotifyGameStateChange(client, gameId, gameInfo.state);
+		NotifyGameReset(client);
+		NotifyGameSetup(client);
+#endif
+		// NotifyPlayerJoining(client, gameId);
+		// NotifyPlayerJoinCompleted(client, gameId, user->get_id());
 	}
 
 	void GameManagerComponent::UpdateMeshConnection(Client* client, Header header) {
@@ -1083,7 +1211,7 @@ namespace Blaze {
 		uint32_t personaId = targetData["PID"].GetUint();
 
 		PlayerState playerState = static_cast<PlayerState>(targetData["STAT"].GetUint());
-		ClientType type = client->type();
+		ClientType type = client->data().type;
 
 		if (playerState == PlayerState::Connecting) {
 			if (type == ClientType::GameplayUser) {
@@ -1112,5 +1240,278 @@ namespace Blaze {
 
 		header.error_code = 0;
 		client->reply(std::move(header));
+	}
+
+	void GameManagerComponent::WriteGameData(Client* client, const Game::Game& game, TDF::Packet& packet, const std::string& playgroupId) {
+		if (!client) {
+			return;
+		}
+
+		const auto& user = client->get_user();
+		if (!user) {
+			return;
+		}
+
+		// Get request data
+		const auto& request = client->get_request();
+
+		auto tCap = request["TCAP"].GetUint();
+		auto versionString = request["VSTR"].GetString();
+
+		// Client data
+		auto clientId = client->get_id();
+
+		// User data
+		auto userId = user->get_id();
+
+		// Game data
+		auto gameId = game.GetId();
+		const auto& gameInfo = game.GetInfo();
+
+		// Game administrators?
+		packet.push_list("ADMN", TDF::Type::Integer);
+		{
+			packet.put_integer("", clientId);
+		}
+		packet.pop();
+
+		// Game attributes
+		packet.push_map("ATTR", TDF::Type::String, TDF::Type::String);
+		for (const auto& [key, value] : gameInfo.attributes) {
+			packet.put_string(key, value);
+		}
+		packet.pop();
+
+		// Game capacity
+		packet.push_list("CAP", TDF::Type::Integer);
+		for (auto value : gameInfo.capacity) {
+			packet.put_integer("", value);
+		}
+		packet.pop();
+
+		packet.put_integer("GID", gameId);
+		packet.put_string("GNAM", gameInfo.name);
+		packet.put_integer("GPVH", 1234); // Game... pvh? u64
+		packet.put_integer("GSET", gameInfo.settings);
+		packet.put_integer("GSID", 1); // Game session id? u64
+		packet.put_integer("GSTA", gameInfo.state);
+		packet.put_string("GTYP", gameInfo.type);
+
+		// Host network data
+		packet.push_list("HNET", TDF::Type::Struct, true);
+		{
+			// TODO: function to write ip stuff
+			packet.push_struct("");
+			{
+				packet.push_struct("EXIP");
+				packet.put_integer("IP", gameInfo.externalIP.address);
+				packet.put_integer("PORT", gameInfo.externalIP.port);
+				packet.pop();
+			} {
+				packet.push_struct("INIP");
+				packet.put_integer("IP", gameInfo.internalIP.address);
+				packet.put_integer("PORT", gameInfo.internalIP.port);
+				packet.pop();
+			}
+			packet.pop();
+		}
+		packet.pop();
+
+		packet.put_integer("HSES", 13666); // u32
+		packet.put_integer("IGNO", gameInfo.ignore ? 1 : 0);
+		packet.put_integer("MCAP", gameInfo.maxPlayers);
+
+		// Quality of Service stuff (unsure where it's used)
+		packet.push_struct("NQOS");
+		{
+			packet.put_integer("DBPS", 100);
+			packet.put_integer("NATT", NatType::Open);
+			packet.put_integer("UBPS", 100);
+		}
+		packet.pop();
+
+		packet.put_integer("NRES", gameInfo.resetable ? 0 : 1);
+		packet.put_integer("NTOP", gameInfo.networkTopology);
+		packet.put_string("PGID", playgroupId); // b6852db1-ba37-4b40-aea3-0bd16efba4f9
+		packet.put_blob("PGSR", nullptr, 0);
+
+		// Player host?
+		packet.push_struct("PHST");
+		{
+			packet.put_integer("HPID", userId); // Player ID? (i64)
+			packet.put_integer("HSLT", 1); // Slot? (u8)
+		}
+		packet.pop();
+
+		packet.put_integer("PRES", gameInfo.presenceMode);
+		packet.put_string("PSAS", "ams");
+		packet.put_integer("QCAP", gameInfo.queueCapacity);
+		packet.put_integer("SEED", 0);
+		packet.put_integer("TCAP", tCap);
+
+		// Team host/leader? wtf is this?
+		packet.push_struct("THST");
+		{
+			packet.put_integer("HPID", gameId); // Player ID? (i64)
+			packet.put_integer("HSLT", 0); // Slot? (u8)
+		}
+		packet.pop();
+
+		// Team ids?
+		packet.push_list("TIDS", TDF::Type::Integer); // u16 list?
+		{
+			packet.put_integer("", userId);
+		}
+		packet.pop();
+
+		packet.put_string("UUID", "71bc4bdb-82ec-494d-8d75-ca5123b827ac"); // 714b05dc-93bc-49ac-961c-cb38b574f30a
+		packet.put_integer("VOIP", gameInfo.voipTopology);
+		packet.put_string("VSTR", versionString);
+		packet.put_blob("XNNC", nullptr, 0);
+		packet.put_blob("XSES", nullptr, 0);
+
+		/*
+		{
+			auto& hnetList = packet.CreateList(&gameStruct, "HNET", TDF::Type::Struct, true);
+			{
+#if 1
+				auto& valuStruct = packet.CreateStruct(&hnetList, "");
+				{
+					auto& exipStruct = packet.CreateStruct(&valuStruct, "EXIP");
+					packet.PutInteger(&exipStruct, "IP", gameInfo.externalIP.address);
+					packet.PutInteger(&exipStruct, "PORT", gameInfo.externalIP.port);
+				} {
+					auto& inipStruct = packet.CreateStruct(&valuStruct, "INIP");
+					packet.PutInteger(&inipStruct, "IP", gameInfo.internalIP.address);
+					packet.PutInteger(&inipStruct, "PORT", gameInfo.internalIP.port);
+				}
+#else
+				auto& hnetMemberUnion = packet.CreateUnion(&hnetList, "", NetworkAddressMember::IpPairAddress);
+				auto& valuStruct = packet.CreateStruct(&hnetMemberUnion, "VALU");
+				{
+					auto& exipStruct = packet.CreateStruct(&valuStruct, "EXIP");
+					packet.PutInteger(&exipStruct, "IP", gameInfo.externalIP.address);
+					packet.PutInteger(&exipStruct, "PORT", gameInfo.externalIP.port);
+				} {
+					auto& inipStruct = packet.CreateStruct(&valuStruct, "INIP");
+					packet.PutInteger(&inipStruct, "IP", gameInfo.internalIP.address);
+					packet.PutInteger(&inipStruct, "PORT", gameInfo.internalIP.port);
+				}
+#endif
+			}
+		}
+		*/
+	}
+
+	void GameManagerComponent::WriteGameRequest(Client* client, const Game::Game& game, TDF::Packet& packet) {
+		if (!client) {
+			return;
+		}
+
+		const auto& user = client->get_user();
+		if (!user) {
+			return;
+		}
+
+		// Get request data
+		const auto& request = client->get_request();
+
+		std::string gameCtr = request["GCTR"].GetString();
+		std::string gameUrl = request["GURL"].GetString();
+		bool gameIgnore = request["IGNO"].GetUint();
+
+		std::string playgroupId = request["PGID"].GetString();
+
+		uint32_t rgId = request["RGID"].GetUint();
+		uint32_t slot = request["SLOT"].GetUint();
+		uint32_t tidx = request["TIDX"].GetUint();
+		uint32_t tCap = request["TCAP"].GetUint();
+		std::string versionString = request["VSTR"].GetString();
+
+		// Client data
+		auto clientId = client->get_id();
+
+		// User data
+		auto userId = user->get_id();
+
+		// Game data
+		auto gameId = game.GetId();
+		const auto& gameInfo = game.GetInfo();
+
+		// Game administrators?
+		packet.push_list("ADMN", TDF::Type::Integer);
+		{
+			packet.put_integer("", clientId);
+		}
+		packet.pop();
+
+		// Game attributes
+		packet.push_map("ATTR", TDF::Type::String, TDF::Type::String);
+		for (const auto& [key, value] : gameInfo.attributes) {
+			packet.put_string(key, value);
+		}
+		packet.pop();
+		
+		packet.put_object_id("BTPL", 0, 0, 0); // What is this?
+		packet.put_string("GCTR", gameCtr); // Game counter?
+		packet.put_string("GNAM", gameInfo.name); // Game name
+		packet.put_integer("GSET", gameInfo.settings); // Game settings
+		packet.put_string("GTYP", gameInfo.type); // Game type
+		packet.put_string("GURL", gameUrl); // Game URL?
+
+		// Host network list
+		packet.push_list("HNET", TDF::Type::Struct, true);
+		{
+			packet.push_struct("EXIP");
+			packet.put_integer("IP", gameInfo.externalIP.address);
+			packet.put_integer("PORT", gameInfo.externalIP.port);
+			packet.pop();
+		} {
+			packet.push_struct("INIP");
+			packet.put_integer("IP", gameInfo.internalIP.address);
+			packet.put_integer("PORT", gameInfo.internalIP.port);
+			packet.pop();
+		}
+		packet.pop();
+
+		packet.put_integer("IGNO", gameInfo.ignore ? 1 : 0);
+		packet.put_integer("NRES", gameInfo.resetable ? 0 : 1);
+		packet.put_integer("NTOP", gameInfo.networkTopology);
+		packet.put_string("PGID", playgroupId);
+		packet.put_blob("PGSC", nullptr, 0);
+
+		// Player capacity?
+		packet.push_list("PCAP", TDF::Type::Integer);
+		for (auto value : gameInfo.capacity) {
+			packet.put_integer("", value);
+		}
+		packet.pop();
+
+		packet.put_integer("PMAX", gameInfo.maxPlayers);
+		packet.put_integer("PRES", gameInfo.presenceMode);
+		packet.put_integer("QCAP", gameInfo.queueCapacity);
+		packet.put_integer("RGID", rgId);
+
+		// Unknown
+		packet.push_list("SIDL", TDF::Type::Integer);
+		packet.put_integer("", 1);
+		packet.pop();
+
+		// Unknown
+		packet.push_list("SEAT", TDF::Type::Integer);
+		packet.put_integer("", 1);
+		packet.pop();
+
+		packet.put_integer("SLOT", slot);
+		packet.put_integer("TCAP", tCap);
+
+		// Team IDs? (probably not)
+		packet.push_list("TIDS", TDF::Type::Integer);
+		packet.put_integer("", 1);
+		packet.pop();
+
+		packet.put_integer("TIDX", tidx);
+		packet.put_integer("VOIP", gameInfo.voipTopology);
+		packet.put_string("VSTR", versionString);
 	}
 }

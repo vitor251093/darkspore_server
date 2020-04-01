@@ -264,6 +264,14 @@ namespace Game {
 				}
 			}
 
+			if (method.empty()) {
+				if (request.uri.parameter("token") == "cookie") {
+					method = "api.account.auth";
+				} else {
+					method = "api.account.getAccount";
+				}
+			}
+
 			if (method == "api.account.setNewPlayerStats") {
 				method = "api.account.auth";
 			}
@@ -642,9 +650,9 @@ namespace Game {
 		auto docResponse = document.append_child("response");
 		if (auto configs = docResponse.append_child("configs")) {
 			if (auto config = configs.append_child("config")) {
-				utils::xml::Set(config, "blaze_service_name", "darkspore");
-				utils::xml::Set(config, "blaze_secure", "Y");
-				utils::xml::Set(config, "blaze_env", "production");
+				utils::xml::Set(config, "blaze_service_name", "darkspore");  // Directly linked to BlazeServiceName
+				utils::xml::Set(config, "blaze_secure", "Y"); // Directly linked to BlazeSecure
+				utils::xml::Set(config, "blaze_env", "dev"); // Directly linked to BlazeEnvironment, can be { prod, beta, cert, test, dev }
 				utils::xml::Set(config, "sporenet_cdn_host", host);
 				utils::xml::Set(config, "sporenet_cdn_port", "80");
 				utils::xml::Set(config, "sporenet_db_host", host);

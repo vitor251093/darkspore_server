@@ -173,7 +173,7 @@ namespace Blaze {
 		XboxServerAddress
 	};
 
-	enum class GameType {
+	enum class GameType : uint8_t {
 		Tutorial = 1,
 		Chain = 2,
 		Arena = 3,
@@ -199,6 +199,34 @@ namespace Blaze {
 		Closed
 	};
 
+	enum class MatchmakingResult {
+		CreatedGame = 0,
+		JoinedNewGame,
+		JoinedExistingGame,
+		TimedOut,
+		Cancelled,
+		Terminated,
+		GameSetupFailed
+	};
+
+	enum class RoomViewUpdate {
+		ConfigReloaded = 0,
+		UserRoomCreated,
+		UserRoomDestroyed
+	};
+
+	enum class ListUpdateType {
+		Add = 1,
+		Remove = 2
+	};
+
+	enum class DestroyGameReason {
+		SYS_GAME_ENDING = 0,
+		SYS_CREATION_FAILED,
+		HOST_LEAVING,
+		TITLE_REASON_BASE_GAME_DESTRUCTION_REASON
+	};
+
 	// Header
 	struct Header {
 		uint16_t length;
@@ -214,16 +242,6 @@ DatalessSetupContext - DCTX {
 	CREATE_GAME_SETUP_CONTEXT = 0
 	JOIN_GAME_SETUP_CONTEXT = 1
 	INDIRECT_JOIN_GAME_FROM_QUEUE_SETUP_CONTEXT = 2
-}
-
-MatchmakingSetupContext / IndirectMatchmakingSetupContext - RSLT {
-	SUCCESS_CREATED_GAME = 0
-	SUCCESS_JOINED_NEW_GAME = 1
-	SUCCESS_JOINED_EXISTING_GAME = 2
-	SESSION_TIMED_OUT = 3
-	SESSION_CANCELED = 4
-	SESSION_TERMINATED = 5
-	SESSION_ERROR_GAME_SETUP_FAILED = 6
 }
 
 ClientData - CDAT {

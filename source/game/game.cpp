@@ -1,54 +1,75 @@
 
 // Include
 #include "game.h"
-#include "../raknet/server.h"
+#include "raknet/server.h"
+
+/*
+	TODO: Rename Game namespace to SporeNet? Same for RakNet?
+		Game -> SporeNet
+		RakNet -> SporeNet
+*/
 
 // Game
 namespace Game {
-	// Manager
-	std::map<uint32_t, std::unique_ptr<RakNet::Server>> Manager::sActiveGames;
+	// Game
+	Game::Ptr Game::Create(uint32_t id) {
+		return Game::Ptr(new Game(id));
+	}
 
-	std::map<uint32_t, GameInfoPtr> Manager::sGames;
-	std::map<std::string, Matchmaking> Manager::sMatchmaking;
+	Game::Game(uint32_t id) : mId(id) {
+		// Something later?
+	}
 
-	GameInfoPtr Manager::CreateGame() {
-		uint32_t id;
-		if (sGames.empty()) {
-			id = 1;
-		} else {
-			id = sGames.rbegin()->first + 1;
+	Game::~Game() {
+		Stop();
+	}
+
+	bool Game::Start() {
+		Stop();
+
+		mObjectManager = std::make_unique<ObjectManager>();
+		mServer = std::make_unique<RakNet::Server>(*this);
+
+		mServer->start(mInfo.externalIP.port);
+		return true;
+	}
+
+	void Game::Stop() {
+		if (mServer && mServer->is_running()) {
+			mServer->stop();
+			// wait until it stops
 		}
 
-		auto game = std::make_shared<GameInfo>();
-		game->id = id;
-
-		sGames[game->id] = game;
-		return game;
+		mServer.reset();
+		mObjectManager.reset();
 	}
 
-	void Manager::RemoveGame(uint32_t id) {
-		auto it = sGames.find(id);
-		if (it != sGames.end()) {
-			sGames.erase(it);
+	Player::Ptr Game::GetPlayer(uint64_t id) const {
+		auto it = mPlayers.find(id);
+		return (it != mPlayers.end()) ? it->second : nullptr;
+	}
+
+	Player::Ptr Game::AddPlayer(uint64_t id) {
+		auto it = mPlayers.try_emplace(id);
+		if (it.second) {
+			it.first->second = std::make_shared<Player>(id);
 		}
+		return it.first->second;
 	}
 
-	GameInfoPtr Manager::GetGame(uint32_t id) {
-		auto it = sGames.find(id);
-		return (it != sGames.end()) ? it->second : nullptr;
+	void Game::RemovePlayer(uint64_t id) {
+		mPlayers.erase(id);
 	}
 
-	void Manager::StartGame(uint32_t id) {
-		auto it = sActiveGames.find(id);
-		if (it == sActiveGames.end()) {
-			auto game = GetGame(id);
-			if (game) {
-				sActiveGames[id] = std::make_unique<RakNet::Server>(game->externalIP.port, id);
-			}
-		}
+	uint32_t Game::GetId() const {
+		return mId;
 	}
 
-	Matchmaking& Manager::StartMatchmaking() {
-		return sMatchmaking["test"];
+	const GameInfo& Game::GetInfo() const {
+		return mInfo;
+	}
+
+	GameInfo& Game::GetInfo() {
+		return mInfo;
 	}
 }

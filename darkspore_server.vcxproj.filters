@@ -159,6 +159,36 @@
     <ClInclude Include="source\raknet\server.h">
       <Filter>Header Files\raknet</Filter>
     </ClInclude>
+    <ClInclude Include="source\game\party.h">
+      <Filter>Header Files\game</Filter>
+    </ClInclude>
+    <ClInclude Include="source\game\room.h">
+      <Filter>Header Files\game</Filter>
+    </ClInclude>
+    <ClInclude Include="source\utils\log.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="source\game\object.h">
+      <Filter>Header Files\game</Filter>
+    </ClInclude>
+    <ClInclude Include="source\game\objectmanager.h">
+      <Filter>Header Files\game</Filter>
+    </ClInclude>
+    <ClInclude Include="source\raknet\types.h">
+      <Filter>Header Files\raknet</Filter>
+    </ClInclude>
+    <ClInclude Include="source\game\gamemanager.h">
+      <Filter>Header Files\game</Filter>
+    </ClInclude>
+    <ClInclude Include="source\game\player.h">
+      <Filter>Header Files\game</Filter>
+    </ClInclude>
+    <ClInclude Include="source\game\character.h">
+      <Filter>Header Files\game</Filter>
+    </ClInclude>
+    <ClInclude Include="source\blaze\functions.h">
+      <Filter>Header Files\blaze</Filter>
+    </ClInclude>
     <ClInclude Include="source\utils\logger.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
@@ -292,6 +322,36 @@
     </ClCompile>
     <ClCompile Include="source\raknet\server.cpp">
       <Filter>Source Files\raknet</Filter>
+    </ClCompile>
+    <ClCompile Include="source\game\party.cpp">
+      <Filter>Source Files\game</Filter>
+    </ClCompile>
+    <ClCompile Include="source\game\room.cpp">
+      <Filter>Source Files\game</Filter>
+    </ClCompile>
+    <ClCompile Include="source\utils\log.cpp">
+      <Filter>Source Files\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="source\game\object.cpp">
+      <Filter>Source Files\game</Filter>
+    </ClCompile>
+    <ClCompile Include="source\game\objectmanager.cpp">
+      <Filter>Source Files\game</Filter>
+    </ClCompile>
+    <ClCompile Include="source\raknet\types.cpp">
+      <Filter>Source Files\raknet</Filter>
+    </ClCompile>
+    <ClCompile Include="source\game\gamemanager.cpp">
+      <Filter>Source Files\game</Filter>
+    </ClCompile>
+    <ClCompile Include="source\game\player.cpp">
+      <Filter>Source Files\game</Filter>
+    </ClCompile>
+    <ClCompile Include="source\game\character.cpp">
+      <Filter>Source Files\game</Filter>
+    </ClCompile>
+    <ClCompile Include="source\blaze\functions.cpp">
+      <Filter>Source Files\blaze</Filter>
     </ClCompile>
     <ClCompile Include="source\game\leaderboard.cpp">
       <Filter>Source Files\game</Filter>

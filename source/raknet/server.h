@@ -6,22 +6,29 @@
 
 // Include
 #include "blaze/types.h"
+#include "client.h"
 
-#include <RakPeerInterface.h>
-#include <BitStream.h>
 #ifdef PACKET_LOGGING
 #	include <PacketLogger.h>
 #endif
+#include <BitStream.h>
 
 #include <cstdint>
 #include <thread>
 #include <mutex>
 #include <vector>
+#include <map>
+#include <array>
+
+namespace Game {
+	class Game;
+}
 
 // RakNet
 namespace RakNet {
 	// Packet
 	namespace PacketID {
+		constexpr MessageID HelloPlayerRequest = 0x7F;
 		constexpr MessageID HelloPlayer = 0x80;
 		constexpr MessageID ReconnectPlayer = 0x81;
 		constexpr MessageID Connected = 0x82;
@@ -62,10 +69,10 @@ namespace RakNet {
 		constexpr MessageID SetObjectGfxState = 0xA6;
 		constexpr MessageID PlayerCharacterDeploy = 0xA7;
 		constexpr MessageID ActionCommandResponse = 0xA8;
-		constexpr MessageID ChainPlayerMsgs = 0xA9;
-		constexpr MessageID ChainVoteMsgs = 0xAA;
-		constexpr MessageID ChainLevelResultsMsgs = 0xAB;
-		constexpr MessageID ChainCashOutMsgs = 0xAC;
+		constexpr MessageID ChainVoteMsgs = 0xA9;
+		constexpr MessageID ChainLevelResultsMsgs = 0xAA;
+		constexpr MessageID ChainCashOutMsgs = 0xAB;
+		constexpr MessageID ChainPlayerMsgs = 0xAC;
 		constexpr MessageID ChainGameMsgs = 0xAD;
 		constexpr MessageID ChainGameOverMsgs = 0xAE;
 		constexpr MessageID QuickGameMsgs = 0xAF;
@@ -79,11 +86,11 @@ namespace RakNet {
 		constexpr MessageID ObjectivesInitForLevel = 0xB7;
 		constexpr MessageID ObjectiveUpdated = 0xB8;
 		constexpr MessageID ObjectivesComplete = 0xB9;
-		constexpr MessageID JuggernautPlayerMsgs = 0xBA;
-		constexpr MessageID JuggernautLobbyMsgs = 0xBB;
-		constexpr MessageID JuggernautGameMsgs = 0xBC;
-		constexpr MessageID JuggernautResultsMsgs = 0xBD;
-		constexpr MessageID CombatEvent = 0xBE;
+		constexpr MessageID CombatEvent = 0xBA;
+		constexpr MessageID JuggernautPlayerMsgs = 0xBB;
+		constexpr MessageID JuggernautLobbyMsgs = 0xBC;
+		constexpr MessageID JuggernautGameMsgs = 0xBD;
+		constexpr MessageID JuggernautResultsMsgs = 0xBE;
 		constexpr MessageID ReloadLevel = 0xBF;
 		constexpr MessageID GravityForceUpdate = 0xC0;
 		constexpr MessageID CooldownUpdate = 0xC1;
@@ -104,65 +111,125 @@ namespace RakNet {
 
 	};
 
+	enum class ObjectiveMedal {
+		InProgress = 0,
+		Failed,
+		Bronze,
+		Silver,
+		Gold,
+		Unknown
+	};
+
+	struct ObjectiveData {
+		uint32_t objectiveHash;
+
+		uint8_t value0;
+		uint8_t value1;
+		uint8_t value2;
+		uint8_t value3;
+
+		std::string description;
+
+		void WriteTo(RakNet::BitStream& stream) const;
+	};
+
+	struct ChainVoteData {
+		std::array<uint32_t, 8> mLevelAssets;
+
+		uint32_t mPlayerAsset = 0;
+
+		ChainVoteData() {
+			mLevelAssets.fill(0);
+		}
+
+		void WriteTo(RakNet::BitStream& stream) const;
+	};
+
 	// Server
 	class Server {
 		public:
-			Server(uint16_t port, uint32_t gameId);
+			Server(Game::Game& game);
 			~Server();
 
-			void run_one();
-
+			void start(uint16_t port);
 			void stop();
 			bool is_running();
 
-		private:
-			void ParsePacket(Packet* packet, MessageID packetType);
+			void run_one();
 
+		private:
+			void ParseRakNetPackets(Packet* packet, uint8_t packetType);
+			void ParseSporeNetPackets(Packet* packet, uint8_t packetType);
+
+			Client::Ptr AddClient(Packet* packet);
+			void RemoveClient(Packet* packet);
+			Client::Ptr GetClient(Packet* packet) const;
+
+			void Send(BitStream& stream, const Client::Ptr& client);
+
+			// RakNet
 			void OnNewIncomingConnection(Packet* packet);
-			void OnHelloPlayer(Packet* packet);
-			void OnPlayerStatusUpdate(Packet* packet);
-			void OnActionCommandMsgs(Packet* packet);
-			void OnDebugPing(Packet* packet);
 
-			void SendHelloPlayer(Packet* packet);
-			void SendConnected(Packet* packet);
-			void SendPlayerJoined(Packet* packet);
-			void SendPlayerDeparted(Packet* packet);
-			void SendPlayerStatusUpdate(Packet* packet, Blaze::PlayerState playerState);
-			void SendGameState(Packet* packet, uint32_t gameState);
-			void SendPlayerCharacterDeploy(Packet* packet, uint32_t id);
-			void SendLabsPlayerUpdate(Packet* packet, bool fullUpdate);
-			void SendObjectCreate(Packet* packet, uint32_t id, uint32_t noun);
-			void SendObjectUpdate(Packet* packet);
-			void SendObjectDelete(Packet* packet);
-			void SendActionCommandResponse(Packet* packet);
-			void SendObjectPlayerMove(Packet* packet);
-			void SendObjectTeleport(Packet* packet);
-			void SendForcePhysicsUpdate(Packet* packet);
-			void SendPhysicsChanged(Packet* packet);
-			void SendLocomotionDataUpdate(Packet* packet);
-			void SendLocomotionDataUnreliableUpdate(Packet* packet);
-			void SendAttributeDataUpdate(Packet* packet);
-			void SendCombatantDataUpdate(Packet* packet);
-			void SendInteractableDataUpdate(Packet* packet);
-			void SendAgentBlackboardUpdate(Packet* packet);
-			void SendLootDataUpdate(Packet* packet);
-			void SendServerEvent(Packet* packet);
-			void SendModifierCreated(Packet* packet);
-			void SendModifierUpdated(Packet* packet);
-			void SendModifierDeleted(Packet* packet);
-			void SendGamePrepareForStart(Packet* packet);
-			void SendGameStart(Packet* packet);
-			void SendArenaGameMessages(Packet* packet);
-			void SendObjectivesInitForLevel(Packet* packet);
-			void SendDirectorState(Packet* packet);
-			void SendPartyMergeComplete(Packet* packet);
-			void SendDebugPing(Packet* packet);
-			void SendTutorial(Packet* packet);
+			// SporeNet
+			void OnHelloPlayerRequest(const Client::Ptr& client);
+			void OnPlayerStatusUpdate(const Client::Ptr& client);
+			void OnActionCommandMsgs(const Client::Ptr& client);
+			void OnChainPlayerMsgs(const Client::Ptr& client);
+			void OnDebugPing(const Client::Ptr& client);
 
-			void SendTestPacket(Packet* packet, MessageID id, const std::vector<uint8_t>& data);
+			void SendHelloPlayer(const Client::Ptr& client);
+			void SendReconnectPlayer(const Client::Ptr& client, GameState gameState);
+			void SendConnected(const Client::Ptr& client);
+			void SendPlayerJoined(const Client::Ptr& client);
+			void SendPlayerDeparted(const Client::Ptr& client);
+			void SendPlayerStatusUpdate(const Client::Ptr& client, uint8_t playerState);
+			void SendGameState(const Client::Ptr& client, const GameStateData& data);
+			void SendPlayerCharacterDeploy(const Client::Ptr& client, uint32_t id);
+			void SendLabsPlayerUpdate(const Client::Ptr& client, bool fullUpdate);
+			void SendObjectCreate(const Client::Ptr& client, uint32_t id, uint32_t noun);
+			void SendObjectUpdate(const Client::Ptr& client);
+			void SendObjectDelete(const Client::Ptr& client);
+			void SendActionCommandResponse(const Client::Ptr& client);
+			void SendObjectPlayerMove(const Client::Ptr& client);
+			void SendObjectTeleport(const Client::Ptr& client);
+			void SendForcePhysicsUpdate(const Client::Ptr& client);
+			void SendPhysicsChanged(const Client::Ptr& client);
+			void SendLocomotionDataUpdate(const Client::Ptr& client);
+			void SendLocomotionDataUnreliableUpdate(const Client::Ptr& client);
+			void SendAttributeDataUpdate(const Client::Ptr& client);
+			void SendCombatantDataUpdate(const Client::Ptr& client);
+			void SendInteractableDataUpdate(const Client::Ptr& client);
+			void SendAgentBlackboardUpdate(const Client::Ptr& client);
+			void SendLootDataUpdate(const Client::Ptr& client);
+			void SendServerEvent(const Client::Ptr& client);
+			void SendModifierCreated(const Client::Ptr& client);
+			void SendModifierUpdated(const Client::Ptr& client);
+			void SendModifierDeleted(const Client::Ptr& client);
+			void SendGamePrepareForStart(const Client::Ptr& client);
+			void SendGameStart(const Client::Ptr& client);
+			void SendArenaGameMessages(const Client::Ptr& client);
+			void SendChainVoteMessages(const Client::Ptr& client);
+			void SendObjectivesInitForLevel(const Client::Ptr& client, const std::vector<ObjectiveData>& objectives);
+			void SendDirectorState(const Client::Ptr& client);
+			void SendPartyMergeComplete(const Client::Ptr& client);
+			void SendReloadLevel(const Client::Ptr& client);
+
+			void SendQuickGame(const Client::Ptr& client);
+			void SendChainGame(const Client::Ptr& client);
+			void SendJuggernautGame(const Client::Ptr& client);
+			void SendKillRaceGame(const Client::Ptr& client);
+			void SendCinematic(const Client::Ptr& client);
+			void SendTutorial(const Client::Ptr& client);
+
+			void SendDebugPing(const Client::Ptr& client);
+
+			void SendTestPacket(const Client::Ptr& client, MessageID id, const std::vector<uint8_t>& data);
 
 		private:
+			Game::Game& mGame;
+
+			std::map<SystemAddress, Client::Ptr> mClients;
+
 			std::thread mThread;
 			std::mutex mMutex;
 #ifdef PACKET_LOGGING

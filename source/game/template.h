@@ -112,6 +112,17 @@ namespace Game {
 		AndromedaDelta =  507464763
 	};
 
+	enum class CreatureType : uint16_t {
+		Bio,
+		Cyber,
+		Plasma,
+		Necro,
+		Chrono,
+		All
+	};
+
+	std::string to_string(CreatureType type);
+
 	// Creature
 	class CreatureTemplate {
 		public:
@@ -142,6 +153,8 @@ namespace Game {
 
 			bool hasFeet;
 			bool hasHands;
+
+			CreatureType type = CreatureType::All;
 
 			uint64_t abilityPassive;
 			uint64_t abilityBasic;

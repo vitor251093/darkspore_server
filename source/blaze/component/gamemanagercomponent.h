@@ -3,7 +3,12 @@
 #define _BLAZE_COMPONENT_GAMEMANAGER_HEADER
 
 // Include
-#include "../tdf.h"
+#include "blaze/tdf.h"
+
+// Predefined
+namespace Game {
+	class Game;
+}
 
 // Blaze
 namespace Blaze {
@@ -18,10 +23,13 @@ namespace Blaze {
 			static void SendCreateGame(Client* client, uint32_t gameId);
 			static void SendJoinGame(Client* client, uint32_t gameId);
 			static void SendStartMatchmaking(Client* client, uint32_t id);
+			static void SendCancelMatchmaking(Client* client, uint32_t id);
 
 			// Notifications
+			static void NotifyMatchmakingFailed(Client* client, uint32_t id, MatchmakingResult result);
+			static void NotifyMatchmakingAsyncStatus(Client* client, uint32_t id);
 			static void NotifyGameCreated(Client* client, uint32_t gameId);
-			static void NotifyGameRemoved(Client* client);
+			static void NotifyGameRemoved(Client* client, uint32_t gameId, DestroyGameReason reason);
 			static void NotifyGameSetup(Client* client);
 			static void NotifyPlayerJoining(Client* client, uint32_t gameId);
 			static void NotifyPlayerJoinCompleted(Client* client, uint32_t gameId, uint32_t personaId);
@@ -35,6 +43,8 @@ namespace Blaze {
 
 		private:
 			static void CreateGame(Client* client, Header header);
+			static void DestroyGame(Client* client, Header header);
+			static void SetPlayerAttributes(Client* client, Header header);
 			static void JoinGame(Client* client, Header header);
 			static void RemovePlayer(Client* client, Header header);
 			static void StartMatchmaking(Client* client, Header header);
@@ -42,6 +52,9 @@ namespace Blaze {
 			static void FinalizeGameCreation(Client* client, Header header);
 			static void ResetDedicatedServer(Client* client, Header header);
 			static void UpdateMeshConnection(Client* client, Header header);
+
+			static void WriteGameData(Client* client, const Game::Game& game, TDF::Packet& packet, const std::string& playgroupId);
+			static void WriteGameRequest(Client* client, const Game::Game& game, TDF::Packet& packet);
 	};
 }
 

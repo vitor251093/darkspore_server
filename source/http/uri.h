@@ -15,7 +15,7 @@ namespace HTTP {
 	class URI {
 		public:
 			static std::string encode(std::string_view str);
-			static bool decode(std::string_view str, std::string& out);
+			static std::string decode(std::string_view str);
 
 			void parse(std::string_view path);
 			
@@ -30,9 +30,9 @@ namespace HTTP {
 			uint16_t port() const;
 
 			std::string parameter(const std::string& name) const;
-			double parameterd(const std::string& name) const;
 			int64_t parameteri(const std::string& name) const;
 			uint64_t parameteru(const std::string& name) const;
+			double parameterd(const std::string& name) const;
 			bool parameterb(const std::string& name) const;
 
 			void set_parameter(const std::string& name, const std::string& value);

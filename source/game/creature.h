@@ -3,16 +3,137 @@
 #define _GAME_CREATURE_HEADER
 
 // Include
+#include <cstdint>
+#include <string>
 #include <vector>
+#include <pugixml.hpp>
 #include "template.h"
 #include "userpart.h"
 #include "../utils/functions.h"
+
+namespace Ability {
+	enum : uint32_t {
+		Strength = 0,
+		Dexterity,
+		Mind,
+		MaxHealthIncrease,
+		MaxHealth,
+		MaxMana,
+		DamageReduction,
+		PhysicalDefense,
+		PhysicalDamageReduction,
+		EnergyDefense,
+		CriticalRating,
+		NonCombatSpeed,
+		CombatSpeed,
+		DamageBuff,
+		Silence,
+		Immobilized,
+		DefenseBoostBasicDamage,
+		PhysicalDamageIncrease,
+		PhysicalDamageIncreaseFlat,
+		AutoCrit,
+		BehindDirectDamageIncrease,
+		BehindOrSideDirectDamageIncrease,
+		CriticalDamageIncrease,
+		AttackSpeedScale,
+		CooldownScale,
+		Frozen,
+		ProjectileSpeedIncrease,
+		AoeResistance,
+		EnergyDamageBuff,
+		Intangible,
+		HealingReduction,
+		EnergyDamageIncrease,
+		EnergyDamageIncreaseFlat,
+		Immune,
+		StealthDetection,
+		LifeSteal,
+		RejectModifier,
+		AoeDamage,
+		TechnologyTypeDamage,
+		SpacetimeTypeDamage,
+		LifeTypeDamage,
+		ElementsTypeDamage,
+		SupernaturalTypeDamage,
+		TechnologyTypeResistance,
+		SpacetimeTypeResistance,
+		LifeTypeResistance,
+		ElementsTypeResistance,
+		SupernaturalTypeResistance,
+		MovementSpeedBuff,
+		ImmuneToDebuffs,
+		BuffDuration,
+		DebuffDuration,
+		ManaSteal,
+		DebuffDurationIncrease,
+		EnergyDamageReduction,
+		Incorporeal,
+		DotDamageIncrease,
+		MindControlled,
+		SwapDisabled,
+		ImmuneToRandomTeleport,
+		ImmuneToBanish,
+		ImmuneToKnockback,
+		AoeRadius,
+		PetDamage,
+		PetHealth,
+		CrystalFind,
+		DNADropped,
+		RangeIncrease,
+		OrbEffectiveness,
+		OverdriveBuildup,
+		OverdriveDuration,
+		LootFind,
+		Surefooted,
+		ImmuneToStunned,
+		ImmuneToSleep,
+		ImmuneToTerrified,
+		ImmuneToSilence,
+		ImmuneToCursed,
+		ImmuneToPoisonOrDisease,
+		ImmuneToBurning,
+		ImmuneToRooted,
+		ImmuneToSlow,
+		ImmuneToPull,
+		DotDamageDoneIncrease,
+		AggroIncrease,
+		AggroDecrease,
+		PhysicalDamageDoneIncrease,
+		PhysicalDamageDoneByAbilityIncrease,
+		EnergyDamageDoneIncrease,
+		EnergyDamageDoneByAbilityIncrease,
+		ChannelTimeDecrease,
+		CrowdControlDurationDecrease,
+		DotDurationDecrease,
+		AoeDurationIncrease,
+		HealIncrease,
+		OnLockdown,
+		HoTDoneIncrease,
+		ProjectileDamageIncrease,
+		DeployBonusInvincibilityTime,
+		PhysicalDamageDecreaseFlat,
+		EnergyDamageDecreaseFlat,
+		MinWeaponDamage,
+		MaxWeaponDamage,
+		MinWeaponDamagePercent,
+		MaxWeaponDamagePercent,
+		DirectAttackDamage,
+		DirectAttackDamagePercent,
+		GetHitAnimDisabled,
+		XPBoost,
+		InvisibleToSecurityTeleporters,
+		BodyScale,
+		Count
+	};
+}
 
 // Game
 namespace Game {
 	
 	// Creature
 	struct Creature {
+		using Ptr = std::shared_ptr<Creature>;
 
 		uint32_t id = 0;
 		uint32_t nounId = 0;
@@ -68,6 +189,8 @@ namespace Game {
 
 			void Add(uint32_t templateId);
 			void Add(Creature creature);
+
+			Creature::Ptr Get(size_t creatureId) const;
 
 		private:
 			std::vector<Creature> mCreatures;

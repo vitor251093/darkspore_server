@@ -330,48 +330,22 @@ namespace Game {
 		return squadPtr;
 	}
 
-	Creature* User::GetCreatureByTemplateId(uint32_t id) {
-		Creature* creaturePtr = nullptr;
+	Creature::Ptr User::GetCreatureByTemplateId(uint32_t id) {
 		for (auto& creature : mCreatures) {
 			if (creature.nounId == id) {
-				creaturePtr = &creature;
-				break;
+				return creature;
 			}
 		}
-		return creaturePtr;
+		return nullptr;
 	}
 
-	const Creature* User::GetCreatureByTemplateId(uint32_t id) const {
-		const Creature* creaturePtr = nullptr;
-		for (const auto& creature : mCreatures) {
-			if (creature.nounId == id) {
-				creaturePtr = &creature;
-				break;
-			}
-		}
-		return creaturePtr;
-	}
-
-	Creature* User::GetCreatureById(uint32_t id) {
-		Creature* creaturePtr = nullptr;
+	Creature::Ptr User::GetCreatureById(uint32_t id) {
 		for (auto& creature : mCreatures) {
 			if (creature.id == id) {
-				creaturePtr = &creature;
-				break;
+				return creature;
 			}
 		}
-		return creaturePtr;
-	}
-
-	const Creature* User::GetCreatureById(uint32_t id) const {
-		const Creature* creaturePtr = nullptr;
-		for (const auto& creature : mCreatures) {
-			if (creature.id == id) {
-				creaturePtr = &creature;
-				break;
-			}
-		}
-		return creaturePtr;
+		return nullptr;
 	}
 
 	void User::UnlockCreature(uint32_t templateId) {
@@ -381,32 +355,177 @@ namespace Game {
 		}
 	}
 
-	void User::UnlockUpgrade(uint32_t unlockId) {
+	void User::UpdateSquad(uint32_t slot, const std::string& creatureStringList, bool pvp) {
+		auto squad = mSquads.Get(slot);
+		if (!squad) {
+			// Squad doesn't exist.
+			return;
+		}
+
+		auto creatureIds = utils::explode_string(creatureStringList, ',');
+		auto it = mCreatures.begin();
+		for (const auto& idString : creatureIds) {
+			auto id = utils::to_number<uint32_t>(idString);
+			if (id == 0) {
+				continue;
+			}
+
+			auto creature = mCreatures.Get(id);
+			if (creature) {
+				*it++ = creature;
+				if (it == mCreatures.end()) {
+					break;
+				}
+			}
+		}
+	}
+
+	bool User::UnlockUpgrade(uint32_t unlockId) {
+		constexpr std::array<uint32_t, 64> unlockCost {
+			0,
+
+			// Catalysts
+			2000, 6000, 16000,
+			30000, 80000, 150000,
+
+			// Catalyst diagonal bonus
+			300000,
+
+			// Stats
+			200, 350, 500,
+			700, 900, 1200,
+			1600, 4000, 8000,
+			13000, 19000, 29000,
+			42000, 57000, 76000,
+			100000, 160000, 250000,
+			
+			// Inventory
+			5000, 25000, 50000,
+			100000, 200000, 400000,
+			1000000, 2500000, 5000000,
+			10000000,
+
+			// PVE Squads
+			500, 4000,
+
+			// PVP Unlock
+			0,
+
+			// Nothing
+			0, 0, 0,
+
+			// Ship fuel tanks
+			400, 1200, 4000,
+
+			// Nothing
+			0,
+
+			// Editor detail slots
+			1000, 5000, 10000,
+
+			// Inventory (again)
+			200, 600, 1200,
+			20000000
+		};
+
+		if (unlockId >= unlockCost.size()) {
+			return false;
+		}
+
+		const auto cost = unlockCost[unlockId];
+		if (cost > mAccount.dna) {
+			return false;
+		}
+
+		mAccount.dna -= cost;
 		switch (unlockId) {
-			case 1: // Catalysts
-				mAccount.unlockCatalysts++;
+			// Catalysts
+			case 1: case 2: case 3:
+			case 4: case 5: case 6: {
+				mAccount.unlockCatalysts = unlockId - 1 + 4;
 				break;
+			}
 
-			case 8: // Stats
-			case 9:
-				mAccount.unlockStats++;
+			// Catalyst diagonal bonus
+			case 7: {
+				mAccount.unlockDiagonalCatalysts = 1;
 				break;
+			}
+			
+			// Stats
+			case 8: case 9: case 10:
+			case 11: case 12: case 13:
+			case 14: case 15: case 16:
+			case 17: case 18: case 19:
+			case 20: case 21: case 22:
+			case 23: case 24: case 25: {
+				mAccount.unlockStats = unlockId - 8 + 1;
+				break;
+			}
 
-			case 36: // PVE Squads
-				mAccount.unlockPveDecks++;
+			// Inventory
+			case 26: case 27: case 28:
+			case 29: case 30: case 31:
+			case 32: case 33: case 34:
+			case 35: {
+				mAccount.unlockInventory = unlockId - 26 + 4;
+				mAccount.unlockInventoryIdentify = 180 + 30 * mAccount.unlockInventory;
 				break;
+			}
 
-			case 38: // PVP Squads
-				mAccount.unlockPvpDecks++;
+			// PVE Squads
+			case 36: case 37: {
+				// TODO: make squads solution better
+				mAccount.unlockPveDecks = unlockId - 36 + 2;
+				mSquads.Create();
 				break;
+			}
 
-			case 46: // Editor detail slots
-				mAccount.unlockEditorFlairSlots++;
+			// PVP Unlock
+			case 38: {
+				mAccount.unlockPvpDecks = 1;
 				break;
+			}
+
+			// Ship engine
+			case 42: case 43: case 44: {
+				mAccount.unlockFuelTanks = unlockId - 42 + 3;
+				break;
+			}
+
+			// Editor detail slots
+			case 46: case 47: case 48: {
+				mAccount.unlockEditorFlairSlots = unlockId - 46 + 4;
+				break;
+			}
+
+			// Inventory (again)
+			case 49: case 50: case 51: {
+				mAccount.unlockInventory = unlockId - 49 + 1;
+				mAccount.unlockInventoryIdentify = 180 + 30 * mAccount.unlockInventory;
+				break;
+			}
+
+			case 52: {
+				mAccount.unlockInventory = unlockId - 52 + 14;
+				mAccount.unlockInventoryIdentify = 180 + 30 * mAccount.unlockInventory;
+				break;
+			}
 
 			default:
 				break;
 		}
+
+		return true;
+	}
+
+	// Rooms
+	const RoomPtr& User::GetRoom() const {
+		return mRoom;
+	}
+
+	void User::SetRoom(const RoomPtr& room) {
+		mRoom = room;
 	}
 
 	pugi::xml_document User::ToXml() {

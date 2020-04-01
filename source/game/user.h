@@ -5,8 +5,11 @@
 // Include
 #include "game.h"
 #include "squad.h"
+#include "room.h"
 #include "userpart.h"
 
+#include <cstdint>
+#include <string>
 #include <map>
 #include "../utils/functions.h"
 
@@ -139,10 +142,10 @@ namespace Game {
 			void set_auth_token(const std::string& authToken) { mAuthToken = authToken; }
 
 
-			const GameInfoPtr& get_game_info() const { return mGameInfo; }
-			void set_game_info(const GameInfoPtr& gameInfo) { mGameInfo = gameInfo; }
+			const Game::Ptr& get_game() const { return mGame; }
+			void set_game(const Game::Ptr& game) { mGame = game; }
 
-
+			
 			auto get_id() const { return mAccount.id; }
 
 			bool UpdateState(uint32_t newState);
@@ -152,15 +155,20 @@ namespace Game {
 			const Squad* GetSquadBySlot(uint32_t slot) const;
 
 			// Creature
-			Creature* GetCreatureByTemplateId(uint32_t id);
-			const Creature* GetCreatureByTemplateId(uint32_t id) const;
-			Creature* GetCreatureById(uint32_t id);
-			const Creature* GetCreatureById(uint32_t id) const;
-
+			Creature::Ptr GetCreatureByTemplateId(uint32_t id);
+			Creature::Ptr GetCreatureById(uint32_t id);
+			
 			void UnlockCreature(uint32_t templateId);
+
+			// Squads
+			void UpdateSquad(uint32_t slot, const std::string& creatureStringList, bool pvp);
 
 			// Upgrades
 			void UnlockUpgrade(uint32_t unlockId);
+
+			// Rooms
+			const RoomPtr& GetRoom() const;
+			void SetRoom(const RoomPtr& room);
 
 			pugi::xml_document ToXml();
 
@@ -179,7 +187,8 @@ namespace Game {
 			std::string mName;
 			std::string mAuthToken;
 
-			GameInfoPtr mGameInfo;
+			Game::Ptr mGame;
+			RoomPtr mRoom;
 
 			uint32_t mId = 0;
 			uint32_t mState = 0;

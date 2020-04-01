@@ -6,7 +6,7 @@
 #include "blaze/server.h"
 #include "http/server.h"
 #include "game/api.h"
-#include "udptest.h"
+#include "game/room.h"
 
 // Application
 class Application {
@@ -24,6 +24,8 @@ class Application {
 
 		boost::asio::io_context& get_io_service();
 
+		Game::RoomManager& GetRoomManager() const;
+
 		Game::API* get_game_api() const;
 		Blaze::Server* get_redirector_server() const;
 		Blaze::Server* get_blaze_server() const;
@@ -37,10 +39,10 @@ class Application {
 		boost::asio::signal_set mSignals;
 
 		std::unique_ptr<Game::API> mGameAPI;
+		std::unique_ptr<Game::RoomManager> mRoomManager;
 
 		std::unique_ptr<Blaze::Server> mRedirectorServer;
 		std::unique_ptr<Blaze::Server> mBlazeServer;
-		std::unique_ptr<UDPTest> mGmsServer;
 		std::unique_ptr<Blaze::Server> mPssServer;
 		std::unique_ptr<Blaze::Server> mTickServer;
 

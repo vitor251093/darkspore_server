@@ -14,8 +14,8 @@ namespace HTTP {
 		return std::string();
 	}
 
-	bool URI::decode(std::string_view str, std::string& out) {
-		out.clear();
+	std::string URI::decode(std::string_view str) {
+		std::string out;
 		out.reserve(str.size());
 
 		std::string tmp(2, '\0');
@@ -27,9 +27,6 @@ namespace HTTP {
 					tmp[1] = str[++i];
 					out += utils::to_number<char>(tmp, 16);
 				}
-				else {
-					return false;
-				}
 			} else if (symbol == '+') {
 				out += ' ';
 			} else {
@@ -37,12 +34,11 @@ namespace HTTP {
 			}
 		}
 
-		return true;
+		return out;
 	}
 
 	void URI::parse(std::string_view path) {
-		std::string decoded_path;
-		decode(path, decoded_path);
+		auto decoded_path = decode(path);
 		path = decoded_path;
 
 		auto scheme_end = parse_scheme(path);
@@ -97,16 +93,6 @@ namespace HTTP {
 		return it != mQuery.end() ? it->second : std::string();
 	}
 
-	double URI::parameterd(const std::string& name) const {
-		double value;
-		try {
-			value = std::stod(parameter(name));
-		} catch (...) {
-			value = 0;
-		}
-		return value;
-	}
-
 	int64_t URI::parameteri(const std::string& name) const {
 		int64_t value;
 		try {
@@ -123,6 +109,16 @@ namespace HTTP {
 			value = std::stoull(parameter(name));
 		} catch (...) {
 			value = std::numeric_limits<uint64_t>::max();
+		}
+		return value;
+	}
+
+	double URI::parameterd(const std::string& name) const {
+		double value;
+		try {
+			value = std::stod(parameter(name));
+		} catch (...) {
+			value = 0;
 		}
 		return value;
 	}
@@ -242,14 +238,7 @@ namespace HTTP {
 		for (const auto& variable : utils::explode_string(query, '&')) {
 			auto separator = variable.find('=');
 			if (separator != std::string::npos) {
-				auto variableValue = std::string(variable.substr(separator + 1));
-				std::string decodedVariableValue;
-
-				if (decode(variableValue, decodedVariableValue)) {
-					mQuery.emplace(variable.substr(0, separator), decodedVariableValue);
-				} else {
-					mQuery.emplace(variable.substr(0, separator), variableValue);
-				}
+				mQuery.emplace(variable.substr(0, separator), variable.substr(separator + 1));
 			} else {
 				mQuery.emplace(variable, std::string());
 			}

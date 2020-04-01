@@ -3,7 +3,7 @@
 #define _BLAZE_COMPONENT_AUTH_HEADER
 
 // Include
-#include "../tdf.h"
+#include "blaze/tdf.h"
 
 // Blaze
 namespace Blaze {
@@ -11,20 +11,31 @@ namespace Blaze {
 
 	// AuthComponent
 	class AuthComponent {
+		enum ErrorCode {
+			InvalidUser = 0xB,
+			InvalidPassword = 0xC, // Use InvalidUser
+			InvalidEmail = 0x16,
+			Deactivated = 0x29,
+			UserInactive = 0x65,
+			AuthenticationRequired = 0x4004,
+			FieldTooLong = 0x400C,
+			AlreadyLoggedIn = 0x4700
+		};
+
 		public:
 			static void Parse(Client* client, const Header& header);
 
 			// Responses
 			static void SendAuthToken(Client* client, const std::string& token);
 
-			static void SendLogin(Client* client, Header header);
-			static void SendLoginPersona(Client* client, Header header);
-			static void SendFullLogin(Client* client, Header header);
-			static void SendConsoleLogin(Client* client, Header header);
+			static void SendLogin(Client* client);
+			static void SendLoginPersona(Client* client);
+			static void SendFullLogin(Client* client);
+			static void SendConsoleLogin(Client* client);
 
-			static void SendTOSInfo(Client* client, Header header);
-			static void SendTermsAndConditions(Client* client, Header header);
-			static void SendPrivacyPolicy(Client* client, Header header);
+			static void SendTOSInfo(Client* client);
+			static void SendTermsAndConditions(Client* client);
+			static void SendPrivacyPolicy(Client* client);
 
 		private:
 			static void ListUserEntitlements(Client* client, Header header);

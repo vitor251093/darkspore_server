@@ -2,9 +2,12 @@
 // Include
 #include "usersessioncomponent.h"
 #include "gamemanagercomponent.h"
-#include "../client.h"
-#include "../../utils/functions.h"
-#include "../../utils/logger.h"
+
+#include "blaze/client.h"
+#include "blaze/functions.h"
+#include "utils/functions.h"
+#include "../../utils/logger.h" 
+
 #include <iostream>
 
 /*
@@ -80,6 +83,21 @@
 
 	Response Packets
 		
+
+	Blaze data
+		UserSessionExtendedData
+			ADDR = union ()
+			BPS = string
+			CMAP = map<unk, unk>
+			CTY = string
+			CVAR = integer_list
+			DMAP = map<unk, unk>
+			HWFG = enum2? (hardware flag?)
+			PSLM = list<unk>
+			QDAT = struct (Quality of Service)
+			UATT = u64
+			ULST = list<unk>
+
 */
 
 // Blaze
@@ -89,16 +107,24 @@ namespace Blaze {
 		switch (header.command) {
 			case 0x14: UpdateNetworkInfo(client, header);           break;
 			case 0x19: UpdateUserSessionClientData(client, header); break;
+
 			default:
-				logger::error("Unknown usersession command: " + header.command);
+			 	logger::error("Unknown usersession command: " + header.command); 
 				break;
 		}
 	}
 
-	void UserSessionComponent::NotifyUserSessionExtendedDataUpdate(Client* client, uint64_t userId) {
-		logger::info("UserSession: User extended data");
+	void UserSessionComponent::NotifyUserSessionExtendedDataUpdate(Client* client, int64_t userId) {
+		std::cout << "UserSession: User extended data" << std::endl;
 
 		TDF::Packet packet;
+
+		packet.push_struct("DATA");
+		WriteUserSessionExtendedData(client, packet);
+		packet.pop();
+
+		packet.put_integer("USID", userId);
+		/*
 		{
 			auto& dataStruct = packet.CreateStruct(nullptr, "DATA");
 			packet.CreateUnion(&dataStruct, "ADDR", NetworkAddressMember::Unset);
@@ -119,19 +145,15 @@ namespace Blaze {
 			packet.PutInteger(&dataStruct, "UATT", 0);
 		}
 		packet.PutInteger(nullptr, "USID", userId);
+		*/
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
-
-		Header header;
-		header.component = Component::UserSessions;
-		header.command = 0x01;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::UserSessions,
+			.command = 0x01
+		}, packet);
 	}
 
-	void UserSessionComponent::NotifyUserAdded(Client* client, uint64_t userId, const std::string& userName) {
+	void UserSessionComponent::NotifyUserAdded(Client* client, int64_t userId, const std::string& userName) {
 		const auto& user = client->get_user();
 		if (!user) {
 			return;
@@ -139,98 +161,83 @@ namespace Blaze {
 
 		logger::info("UserSession: Add user");
 
-		auto& request = client->get_request();
+		UserIdentification userIdentification;
+		userIdentification.localization = client->data().lang;
+		userIdentification.id = userId;
+		userIdentification.name = userName;
 
 		TDF::Packet packet;
-		{
-			auto& dataStruct = packet.CreateStruct(nullptr, "DATA");
-			packet.CreateUnion(&dataStruct, "ADDR", NetworkAddressMember::Unset);
-			packet.PutString(&dataStruct, "BPS", "");
-			packet.PutString(&dataStruct, "CTY", "");
-			{
-				auto& dmapMap = packet.CreateMap(&dataStruct, "DMAP", TDF::Type::Integer, TDF::Type::Integer);
-				packet.PutInteger(&dmapMap, "0x70001", 55);
-				packet.PutInteger(&dmapMap, "0x70002", 707);
-			}
-			packet.PutInteger(&dataStruct, "HWFG", 0);
-			{
-				auto& qdatStruct = packet.CreateStruct(&dataStruct, "QDAT");
-				packet.PutInteger(&qdatStruct, "DBPS", 1);
-				packet.PutInteger(&qdatStruct, "NATT", NatType::Open);
-				packet.PutInteger(&qdatStruct, "UBPS", 1);
-			}
-			packet.PutInteger(&dataStruct, "UATT", 0);
-		} {
-			auto& userStruct = packet.CreateStruct(nullptr, "USER");
-			packet.PutInteger(&userStruct, "AID", userId);
-			packet.PutInteger(&userStruct, "ALOC", client->localization());
-			packet.PutBlob(&userStruct, "EXBB", nullptr, 0);
-			packet.PutInteger(&userStruct, "EXID", 0);
-			packet.PutInteger(&userStruct, "ID", userId);
-			packet.PutString(&userStruct, "NAME", userName);
-		}
+		packet.push_struct("DATA");
+		WriteUserSessionExtendedData(client, packet);
+		packet.pop();
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
+		packet.push_struct("USER");
+		userIdentification.Write(packet);
+		packet.pop();
 
-		Header header;
-		header.component = Component::UserSessions;
-		header.command = 0x02;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::UserSessions,
+			.command = 0x02
+		}, packet);
 	}
 
-	void UserSessionComponent::NotifyUserUpdated(Client* client, uint64_t userId) {
-		auto& request = client->get_request();
-
+	void UserSessionComponent::NotifyUserUpdated(Client* client, int64_t userId) {
 		TDF::Packet packet;
-		packet.PutInteger(nullptr, "FLGS", SessionState::Authenticated);
-		packet.PutInteger(nullptr, "ID", userId);
+		packet.put_integer("FLGS", SessionState::Authenticated);
+		packet.put_integer("ID", userId);
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
-
-		Header header;
-		header.component = Component::UserSessions;
-		header.command = 0x05;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::UserSessions,
+			.command = 0x05
+		}, packet);
 	}
 
 	void UserSessionComponent::UpdateNetworkInfo(Client* client, Header header) {
 		logger::info("Update network info");
 
-		auto& request = client->get_request();
+		// UDEV = router info?
+		// USTA = upnp on or off
 
-		const auto& valu = request["ADDR"]["VALU"];
+		const auto& request = client->get_request();
+
+		const auto& addrData = request["ADDR"]["VALU"];
 		/*
 		"ADDR": {
 			"_Type": 6,
-			"_AddressMember" : 2,
-			"VALU" : {
+				"_AddressMember" : 2,
+				"VALU" : {
 				"_Type": 3,
-				"EXIP" : {
+					"EXIP" : {
 					"_Type": 3,
-					"IP" : 0,
-					"PORT" : 0
+						"IP" : 0,
+						"PORT" : 0
 				},
-				"INIP" : {
-					"_Type": 3,
-					"IP" : 3232235954,
-					"PORT" : 3659
-				}
+					"INIP" : {
+						"_Type": 3,
+							"IP" : 3232235954,
+							"PORT" : 3659
+					}
 			}
 		},
 		*/
+
+		const auto& user = client->get_user();
+		if (user) {
+			NotifyUserSessionExtendedDataUpdate(client, user->get_id());
+		}
+
 		header.error_code = 0;
 		client->reply(std::move(header));
 
 		/*
-        const auto& inip = valu["INIP"];
-        const auto& ip   = inip["IP"];
-        const auto& port = inip["PORT"];
+		Log.Info(string.Format("Client {0} updating network info", request.Client.ID));
+
+        var addr = (TdfUnion)request.Data["ADDR"];
+        var valu = (TdfStruct)addr.Data.Find(tdf => tdf.Label == "VALU");
+
+        var inip = (TdfStruct)valu.Data.Find(tdf => tdf.Label == "INIP");
+        var ip = (TdfInteger)inip.Data.Find(tdf => tdf.Label == "IP");
+        var port = (TdfInteger)inip.Data.Find(tdf => tdf.Label == "PORT");
 
         request.Client.InternalIP = ip.Value;
         request.Client.InternalPort = (ushort)port.Value;
@@ -244,8 +251,75 @@ namespace Blaze {
 
 	void UserSessionComponent::UpdateUserSessionClientData(Client* client, Header header) {
 		// Fetch level, playgroup id, etc
+		// Log(client->get_request());
+
+		const auto& data = client->data();
+
+		TDF::Packet packet;
+		packet.put_integer("IITO", data.iito ? 1 : 0);
+		packet.put_integer("LANG", data.lang);
+		packet.put_string("SVCN", data.svcn);
+		packet.put_integer("TYPE", data.type);
 
 		header.error_code = 0;
 		client->reply(std::move(header));
+	}
+
+	void UserSessionComponent::WriteUserSessionExtendedData(Client* client, TDF::Packet& packet) {
+		constexpr const char* bpsValues[3] {
+			"iad", "gva", "nrt"
+		};
+
+		NetworkQosData qos;
+		qos.dbps = 10;
+		qos.type = NatType::Open;
+		qos.ubps = 10;
+
+		// Address
+		packet.push_union("ADDR", NetworkAddressMember::Unset);
+		packet.pop();
+
+		// used when joining lobby (can be either iad, gva or nrt)
+		packet.put_string("BPS", bpsValues[0]);
+
+		// 
+		packet.push_map("CMAP", TDF::Type::Integer, TDF::Type::Integer); // map<uint32_t, int32_t>
+		packet.pop();
+
+		// Country?
+		packet.put_string("CTY", "sweden");
+
+		//
+		packet.push_integer_list("CVAR"); // off_106BAB4
+		{
+
+		}
+		packet.pop();
+
+		// ?
+		packet.push_map("DMAP", TDF::Type::Integer, TDF::Type::Integer); // map<uint32_t, int64_t>
+		packet.put_integer("0x70001", 55);
+		packet.put_integer("0x70002", 707);
+		packet.pop();
+
+		// Hardware flags?
+		packet.put_integer("HWFG", 1);
+
+		// 
+		packet.push_list("PSLM", TDF::Type::Integer); // vector<int32_t>
+		packet.pop();
+
+		// Quality of Service
+		packet.push_struct("QDAT");
+		qos.Write(packet);
+		packet.pop();
+
+		//
+		packet.put_integer("UATT", 1234);
+
+		//
+		packet.push_list("ULST", TDF::Type::ObjectId); // vector<vec3>
+		packet.put_object_id("", 0, 0, 0);
+		packet.pop();
 	}
 }

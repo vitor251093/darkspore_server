@@ -2,6 +2,7 @@
 // Include
 #include "creature.h"
 #include <algorithm>
+#include "../utils/functions.h"
 #include "../repository/template.h"
 #include "../repository/userpart.h"
 #include "config.h"
@@ -234,5 +235,14 @@ namespace Game {
 
 	void Creatures::Add(Creature creature) {
 		mCreatures.emplace_back(creature);
+	}
+
+	Creature::Ptr Creatures::Get(size_t creatureId) const {
+		for (const auto& creature : mCreatures) {
+			if (creature.id == creatureId) {
+				return creature;
+			}
+		}
+		return nullptr;
 	}
 }

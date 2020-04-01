@@ -36,21 +36,23 @@ Application& Application::GetApp() {
 bool Application::OnInit() {
 	setlocale(LC_ALL, "C");
 
+#ifdef _WIN32
 	AllocConsole();
 	(void)freopen("CONOUT$", "w", stdout);
 	(void)freopen("CONOUT$", "w", stderr);
 	SetConsoleOutputCP(CP_UTF8);
+#endif
 
 	// Config
 	Game::Config::Load("config.xml");
 
 	// Game
 	mGameAPI = std::make_unique<Game::API>();
+	mRoomManager = std::make_unique<Game::RoomManager>();
 
 	// Blaze
 	mRedirectorServer = std::make_unique<Blaze::Server>(mIoService, 42127);
 	mBlazeServer = std::make_unique<Blaze::Server>(mIoService, 10041);
-	// mGmsServer = std::make_unique<UDPTest>(mIoService, 3659);
 
 	mPssServer = std::make_unique<Blaze::Server>(mIoService, 8443);
 	mTickServer = std::make_unique<Blaze::Server>(mIoService, 8999);
@@ -70,7 +72,7 @@ bool Application::OnInit() {
 
 int Application::OnExit() {
 	mGameAPI.reset();
-	mGmsServer.reset();
+	mRoomManager.reset();
 	mRedirectorServer.reset();
 	mBlazeServer.reset();
 	mHttpServer.reset();
@@ -88,6 +90,10 @@ void Application::Run() {
 
 boost::asio::io_context& Application::get_io_service() {
 	return mIoService;
+}
+
+Game::RoomManager& Application::GetRoomManager() const {
+	return *mRoomManager;
 }
 
 Game::API* Application::get_game_api() const {

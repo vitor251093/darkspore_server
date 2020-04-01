@@ -5,6 +5,8 @@
 
 #include "blaze/client.h"
 #include "utils/logger.h"
+#include "blaze/functions.h"
+#include "utils/functions.h"
 
 #include <iostream>
 
@@ -29,6 +31,20 @@
 		ALST
 			list of ListInfo
 
+		ListMemberInfoUpdate
+			LMID = 0x18
+			LUPT = 0x1C (ListUpdateType)
+
+		ListMemberInfo
+			LMID = 0x18
+			TIME = 0x34
+
+		ListMemberId
+			BLID = 0x34
+			PNAM = 0x24
+			XREF = 0x30
+			XTYP = 0x1C
+
 		ListMember
 			INFO = 0x18
 			MEML = 0x58
@@ -47,7 +63,9 @@
 			TYPE = 0x38
 
 		BIDL
-			list of LID?
+			list of structs with {
+				ListMemberInfoUpdate ()
+			}
 
 		PresenceInfo
 			GRP = 0x40
@@ -72,6 +90,7 @@ namespace Blaze {
 	void AssociationComponent::Parse(Client* client, const Header& header) {
 		switch (header.command) {
 			case 0x06: GetLists(client, header); break;
+
 			default:
 				logger::error("Unknown associationlists command: " + header.command);
 				break;
@@ -79,68 +98,113 @@ namespace Blaze {
 	}
 
 	void AssociationComponent::SendLists(Client* client) {
-		auto user = client->get_user();
+		const auto& request = client->get_request();
+		const auto& user = client->get_user();
 
-		auto& request = client->get_request();
-		// request["OFRC"].GetUint();
+		std::vector<ListInfo> listInfo {
+			{
+				.blazeObjectId { 0, 0, 0 },
+				.identification {
+					.name = "",
+					.type = 4
+				},
+				.flags = 1,
+				.lms = 0,
+				.prid = 0
+			}, {
+				.blazeObjectId { 0, 0, 0 },
+				.identification {
+					.name = "",
+					.type = 5
+				},
+				.flags = 1 | 16,
+				.lms = 0,
+				.prid = 0
+			}
+		};
 
 		TDF::Packet packet;
-		{
-			auto& lmapList = packet.CreateList(nullptr, "LMAP", TDF::Type::Struct);
-			/*
-			{
-				auto& member = packet.CreateStruct(&lmapList, "");
-			}
-			*/
+		packet.push_list("ALST", TDF::Type::Struct);
+		for (const auto& info : listInfo) {
+			packet.push_struct("");
+			info.Write(packet);
+			packet.pop();
 		}
+		packet.pop();
 
-		const auto& account = user->get_account();
-		packet.PutInteger(nullptr, "GRP", 0xFF);
-		packet.PutInteger(nullptr, "LVL", 0xCC);
-		packet.PutInteger(nullptr, "STAT", PresenceState::Online_Client);
-		packet.PutInteger(nullptr, "XTRA", 0xAA); // ?
+		packet.put_integer("MXRC", request["MXRC"].GetUint());
+		packet.put_integer("OFRC", request["OFRC"].GetUint());
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
-
-		Header header;
-		header.component = Component::AssociationLists;
-		header.command = 0x06;
-		header.error_code = 0;
-
-		client->reply(std::move(header), outBuffer);
+		client->reply({
+			.component = Component::AssociationLists,
+			.command = 0x06
+		}, packet);
 	}
 
-	void AssociationComponent::NotifyUpdateListMembership(Client* client) {
+	void AssociationComponent::NotifyUpdateListMembership(Client* client, uint32_t type) {
+		const auto& user = client->get_user();
+
+		BlazeUser test;
+
+		ListIdentification identification;
+		identification.name = user->get_name();
+		identification.type = type;
+
+		// Member data
+		ListMemberInfoUpdate infoUpdate;
+		infoUpdate.type = ListUpdateType::Add;
+
+		ListMemberInfo& info = infoUpdate.info;
+		info.id.id = user->get_id();
+		info.id.name = user->get_name();
+		info.time = utils::get_unix_time();
+
 		TDF::Packet packet;
-		{
-			auto& bidlList = packet.CreateList(nullptr, "BIDL", TDF::Type::Struct);
-			/*
-			{
-				auto& member = packet.CreateStruct(&bidlList, "");
-			}
-			*/
-		} {
-			auto& lidStruct = packet.CreateStruct(nullptr, "LID");
-			packet.PutString(&lidStruct, "LNM", "");
-			packet.PutInteger(&lidStruct, "TYPE", 4);
-		}
+		packet.push_list("BIDL", TDF::Type::Struct);
+			packet.push_struct("");
+			infoUpdate.Write(packet);
+			packet.pop();
+		packet.pop();
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
+		packet.push_struct("LID");
+		identification.Write(packet);
+		packet.pop();
 
-		Header header;
-		header.component = Component::AssociationLists;
-		header.command = 0x01;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::AssociationLists,
+			.command = 0x01
+		}, packet);
 	}
 
 	void AssociationComponent::GetLists(Client* client, Header header) {
+		NotifyUpdateListMembership(client, 4);
+		NotifyUpdateListMembership(client, 5);
+
+		// Otherwise the client says "Could not get association lists"
 		SendLists(client);
 
 		// PlaygroupsComponent::NotifyJoinPlaygroup(client);
 		// NotifyUpdateListMembership(client);
+	}
+
+	rapidjson::Value& AssociationComponent::WriteListMember(TDF::Packet& packet, rapidjson::Value* parent, const std::string& label, const BlazeUser& user) {
+		auto& value = packet.CreateStruct(parent, label);
+		{
+			auto& info = packet.CreateStruct(&value, "INFO");
+			{
+				auto& lmid = packet.CreateStruct(&info, "LMID");
+				packet.PutInteger(&info, "BLID", utils::get_unix_time());
+				packet.PutString(&info, "PNAM", user.name);
+				packet.PutInteger(&info, "XREF", 0);
+				packet.PutInteger(&info, "XTYP", ExternalRefType::Unknown);
+			}
+			packet.PutInteger(&info, "TIME", utils::get_unix_time());
+		} {
+			auto& meml = packet.CreateList(&value, "MEML", TDF::Type::String);
+
+		}
+		packet.PutInteger(&value, "OFRC", 0);
+		packet.PutInteger(&value, "TOCT", utils::get_unix_time());
+		return value;
 	}
 }

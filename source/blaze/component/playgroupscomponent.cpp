@@ -1,9 +1,11 @@
 
 // Include
 #include "playgroupscomponent.h"
-#include "../client.h"
-#include "../../utils/functions.h"
-#include "../../utils/logger.h"
+
+#include "blaze/client.h"
+#include "blaze/functions.h"
+#include "utils/functions.h"
+
 #include <iostream>
 
 /*
@@ -118,6 +120,7 @@ namespace Blaze {
 			case 0x09: FinalizePlaygroupCreation(client, header); break;
 			case 0x0A: LookupPlaygroupInfo(client, header);       break;
 			case 0x0B: ResetPlaygroupSession(client, header);     break;
+
 			default:
 				logger::error("Unknown playgroups command: " + header.command);
 				break;
@@ -126,202 +129,164 @@ namespace Blaze {
 
 	void PlaygroupsComponent::NotifyDestroyPlaygroup(Client* client, uint32_t playgroupId, uint32_t reason) {
 		TDF::Packet packet;
-		packet.PutInteger(nullptr, "PGID", playgroupId);
-		packet.PutInteger(nullptr, "REAS", reason);
+		packet.put_integer("PGID", playgroupId);
+		packet.put_integer("REAS", reason);
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
-
-		Header header;
-		header.component = Component::Playgroups;
-		header.command = 0x32;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::Playgroups,
+			.command = 0x32
+		}, packet);
 	}
 
 	void PlaygroupsComponent::NotifyJoinPlaygroup(Client* client) {
-		auto user = client->get_user();
+		const auto& user = client->get_user();
+		if (!user) {
+			return;
+		}
+
+		auto userId = user->get_id();
+
+		PlaygroupInfo info;
+		info.enbv = true;
+		info.hostSlotId = 0;
+		info.state = PlaygroupJoinState::Open;
+		info.pres = PresenceMode::Standard;
+		info.ownerId = userId;
+		info.memberLimit = 1;
+		info.ntop = GameNetworkTopology::ClientServerDedicated;
+		info.playgroupId = 1;
+		info.ukey = "what";
+		info.uprs = true;
+		info.name = "Test playgroup";
+		info.uuid = "71bc4bdb-82ec-494d-8d75-ca5123b827ac";
 
 		TDF::Packet packet;
-		{
-			auto& infoStruct = packet.CreateStruct(nullptr, "INFO");
-			{
-				auto& attrMap = packet.CreateMap(&infoStruct, "ATTR", TDF::Type::String, TDF::Type::String);
-			}
-			packet.PutInteger(&infoStruct, "ENVB", 1);
-			{
-				auto& hnetUnion = packet.CreateUnion(&infoStruct, "HNET", NetworkAddressMember::Unset);
-			}
-			packet.PutInteger(&infoStruct, "HSID", user->get_id()); // host session id?
-			packet.PutInteger(&infoStruct, "JOIN", PlaygroupJoinState::Open);
-			packet.PutInteger(&infoStruct, "MLIM", 1); // member limit
-			packet.PutString(&infoStruct, "NAME", "My Room"); // playgroup name?
-			packet.PutInteger(&infoStruct, "NTOP", GameNetworkTopology::ClientServerDedicated);
-			packet.PutInteger(&infoStruct, "OWNR", user->get_id());
-			packet.PutInteger(&infoStruct, "PGID", 1);
-			packet.PutInteger(&infoStruct, "PRES", PresenceMode::Standard);
-			packet.PutString(&infoStruct, "NAME", "My Room");
-			packet.PutString(&infoStruct, "UKEY", "what");
-			packet.PutInteger(&infoStruct, "UPRS", 1);
-			packet.PutString(&infoStruct, "UUID", "71bc4bdb-82ec-494d-8d75-ca5123b827ac");
-			packet.PutInteger(&infoStruct, "VOIP", VoipTopology::Disabled);
-			packet.PutBlob(&infoStruct, "XNNC", nullptr, 0);
-			packet.PutBlob(&infoStruct, "XSES", nullptr, 0);
-		} {
-			auto& mlstList = packet.CreateList(nullptr, "MLST", TDF::Type::Struct);
-		}
-		packet.PutInteger(nullptr, "USER", user->get_id());
+		packet.push_struct("INFO");
+		info.Write(packet);
+		packet.pop();
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
+		packet.push_list("MLST", TDF::Type::Struct);
+		packet.pop();
 
-		Header header;
-		header.component = Component::Playgroups;
-		header.command = 0x33;
-		header.error_code = 0;
+		packet.put_integer("USER", userId);
 
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::Playgroups,
+			.command = 0x33
+		}, packet);
 	}
 
 	void PlaygroupsComponent::NotifyMemberJoinedPlaygroup(Client* client, uint32_t playgroupId) {
+		PlaygroupMemberInfo memberInfo;
+		memberInfo.jtim = 0;
+		memberInfo.permissions = 0;
+		memberInfo.slot = 0;
+
+		UserIdentification& memberUser = memberInfo.user;
+		memberUser.id = 0;
+		memberUser.localization = 0;
+		memberUser.name = "Unknown";
+
 		TDF::Packet packet;
-		{
-			auto& membStruct = packet.CreateStruct(nullptr, "MEMB");
-		}
-		packet.PutInteger(nullptr, "PGID", playgroupId);
+		packet.push_struct("MEMB");
+		memberInfo.Write(packet);
+		packet.pop();
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
+		packet.put_integer("PGID", playgroupId);
 
-		Header header;
-		header.component = Component::Playgroups;
-		header.command = 0x34;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::Playgroups,
+			.command = 0x34
+		}, packet);
 	}
 
 	void PlaygroupsComponent::NotifyMemberRemovedFromPlaygroup(Client* client, uint32_t playgroupId, uint32_t reason) {
 		TDF::Packet packet;
-		packet.PutInteger(nullptr, "MLST", 0);
-		packet.PutInteger(nullptr, "PGID", playgroupId);
-		packet.PutInteger(nullptr, "REAS", reason);
+		packet.put_integer("MLST", 0);
+		packet.put_integer("PGID", playgroupId);
+		packet.put_integer("REAS", reason);
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
-
-		Header header;
-		header.component = Component::Playgroups;
-		header.command = 0x35;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::Playgroups,
+			.command = 0x35
+		}, packet);
 	}
 
 	void PlaygroupsComponent::NotifyPlaygroupAttributesSet(Client* client, uint32_t playgroupId) {
 		TDF::Packet packet;
-		{
-			auto& attrMap = packet.CreateMap(nullptr, "ATTR", TDF::Type::String, TDF::Type::String);
-		}
-		packet.PutInteger(nullptr, "PGID", playgroupId);
+		packet.push_map("ATTR", TDF::Type::String, TDF::Type::String);
+		// playgroup attributes
+		packet.pop();
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
+		packet.put_integer("PGID", playgroupId);
 
-		Header header;
-		header.component = Component::Playgroups;
-		header.command = 0x36;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::Playgroups,
+			.command = 0x36
+		}, packet);
 	}
 
 	void PlaygroupsComponent::NotifyMemberAttributesSet(Client* client, uint32_t playgroupId) {
 		TDF::Packet packet;
-		{
-			auto& attrMap = packet.CreateMap(nullptr, "ATTR", TDF::Type::String, TDF::Type::String);
-		}
-		packet.PutInteger(nullptr, "EID", 0);
-		packet.PutInteger(nullptr, "PGID", playgroupId);
+		packet.push_map("ATTR", TDF::Type::String, TDF::Type::String);
+		// member attributes
+		packet.pop();
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
+		packet.put_integer("EID", 0); // member id?
+		packet.put_integer("PGID", playgroupId);
 
-		Header header;
-		header.component = Component::Playgroups;
-		header.command = 0x45;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::Playgroups,
+			.command = 0x45
+		}, packet);
 	}
 
 	void PlaygroupsComponent::NotifyLeaderChange(Client* client, uint32_t playgroupId) {
 		TDF::Packet packet;
-		packet.PutInteger(nullptr, "HSID", 0);
-		packet.PutInteger(nullptr, "LID", 0); // Leader ID?
-		packet.PutInteger(nullptr, "PGID", playgroupId);
+		packet.put_integer("HSID", 0); // new host(leader) slot id?
+		packet.put_integer("LID", 0); // Leader ID?
+		packet.put_integer("PGID", playgroupId);
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
-
-		Header header;
-		header.component = Component::Playgroups;
-		header.command = 0x4F;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::Playgroups,
+			.command = 0x4F
+		}, packet);
 	}
 
 	void PlaygroupsComponent::NotifyMemberPermissionsChange(Client* client, uint32_t playgroupId) {
 		TDF::Packet packet;
-		packet.PutInteger(nullptr, "LID", 0);
-		packet.PutInteger(nullptr, "PERM", 0);
-		packet.PutInteger(nullptr, "PGID", playgroupId);
+		packet.put_integer("LID", 0);
+		packet.put_integer("PERM", 0);
+		packet.put_integer("PGID", playgroupId);
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
-
-		Header header;
-		header.component = Component::Playgroups;
-		header.command = 0x50;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::Playgroups,
+			.command = 0x50
+		}, packet);
 	}
 
 	void PlaygroupsComponent::NotifyJoinControlsChange(Client* client, uint32_t playgroupId) {
 		TDF::Packet packet;
-		packet.PutInteger(nullptr, "OPEN", 0);
-		packet.PutInteger(nullptr, "PGID", playgroupId);
+		packet.put_integer("OPEN", PlaygroupJoinState::Open);
+		packet.put_integer("PGID", playgroupId);
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
-
-		Header header;
-		header.component = Component::Playgroups;
-		header.command = 0x55;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::Playgroups,
+			.command = 0x55
+		}, packet);
 	}
 
 	void PlaygroupsComponent::NotifyXboxSessionInfo(Client* client, uint32_t playgroupId) {
 		TDF::Packet packet;
-		packet.PutInteger(nullptr, "PGID", playgroupId);
-		packet.PutInteger(nullptr, "PRES", 1);
-		packet.PutBlob(nullptr, "XNNC", nullptr, 0);
-		packet.PutBlob(nullptr, "XSES", nullptr, 0);
+		packet.put_integer("PGID", playgroupId);
+		packet.put_integer("PRES", PresenceMode::Standard);
+		packet.put_blob("XNNC", nullptr, 0);
+		packet.put_blob("XSES", nullptr, 0);
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
-
-		Header header;
-		header.component = Component::Playgroups;
-		header.command = 0x56;
-		header.error_code = 0;
-
-		client->notify(std::move(header), outBuffer);
+		client->notify({
+			.component = Component::Playgroups,
+			.command = 0x56
+		}, packet);
 	}
 
 	void PlaygroupsComponent::NotifyXboxSessionChange(Client* client, uint32_t playgroupId) {
@@ -329,46 +294,46 @@ namespace Blaze {
 	}
 
 	void PlaygroupsComponent::CreatePlaygroup(Client* client, Header header) {
-		logger::error("CreatePlaygroup");
+		logger::info("CreatePlaygroup");
 	}
 
 	void PlaygroupsComponent::DestroyPlaygroup(Client* client, Header header) {
-		logger::error("DestroyPlaygroup");
+		logger::info("DestroyPlaygroup");
 	}
 
 	void PlaygroupsComponent::JoinPlaygroup(Client* client, Header header) {
-		logger::error("JoinPlaygroup");
+		logger::info("JoinPlaygroup");
 	}
 
 	void PlaygroupsComponent::LeavePlaygroup(Client* client, Header header) {
-		logger::error("LeavePlaygroup");
+		logger::info("LeavePlaygroup");
 	}
 
 	void PlaygroupsComponent::SetPlaygroupAttributes(Client* client, Header header) {
-		logger::error("SetPlaygroupAttributes");
+		logger::info("SetPlaygroupAttributes");
 	}
 
 	void PlaygroupsComponent::SetMemberAttributes(Client* client, Header header) {
-		logger::error("SetMemberAttributes");
+		logger::info("SetMemberAttributes");
 	}
 
 	void PlaygroupsComponent::KickPlaygroupMember(Client* client, Header header) {
-		logger::error("KickPlaygroupMember");
+		logger::info("KickPlaygroupMember");
 	}
 
 	void PlaygroupsComponent::SetPlaygroupJoinControls(Client* client, Header header) {
-		logger::error("SetPlaygroupJoinControls");
+		logger::info("SetPlaygroupJoinControls");
 	}
 
 	void PlaygroupsComponent::FinalizePlaygroupCreation(Client* client, Header header) {
-		logger::error("FinalizePlaygroupCreation");
+		logger::info("FinalizePlaygroupCreation");
 	}
 
 	void PlaygroupsComponent::LookupPlaygroupInfo(Client* client, Header header) {
-		logger::error("LookupPlaygroupInfo");
+		logger::info("LookupPlaygroupInfo");
 	}
 
 	void PlaygroupsComponent::ResetPlaygroupSession(Client* client, Header header) {
-		logger::error("ResetPlaygroupSession");
+		logger::info("ResetPlaygroupSession");
 	}
 }

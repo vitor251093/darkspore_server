@@ -5,6 +5,19 @@
 
 // Game
 namespace Game {
+	// CreatureType
+	std::string to_string(CreatureType type) {
+		switch (type) {
+			case CreatureType::Bio:    return "bio";
+			case CreatureType::Cyber:  return "cyber";
+			case CreatureType::Plasma: return "plasma";
+			case CreatureType::Necro:  return "necro";
+			case CreatureType::Chrono: return "chrono";
+			case CreatureType::All:    return "all";
+			default: return "unknown";
+		}
+	}
+
 	// Template
 	void CreatureTemplate::ReadXml(const pugi::xml_node& node) {
 		id = utils::xml::GetString<uint32_t>(node, "id");

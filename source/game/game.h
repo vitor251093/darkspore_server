@@ -3,7 +3,9 @@
 #define _GAME_GAME_HEADER
 
 // Include
-#include "../blaze/types.h"
+#include "blaze/types.h"
+#include "objectmanager.h"
+#include "player.h"
 
 #include <cstdint>
 #include <string>
@@ -33,7 +35,6 @@ namespace Game {
 		std::string level;
 		std::string type;
 
-		uint32_t id = std::numeric_limits<uint32_t>::max();
 		uint64_t settings = 0;
 
 		int64_t clientId = 0;
@@ -50,6 +51,7 @@ namespace Game {
 		uint16_t queueCapacity = 0;
 
 		bool resetable = false;
+		bool ignore = false;
 	};
 
 	using GameInfoPtr = std::shared_ptr<GameInfo>;
@@ -78,24 +80,41 @@ namespace Game {
 		std::string id;
 	};
 
-	// Manager
-	class Manager {
+	class Game {
 		public:
-			// Game
-			static GameInfoPtr CreateGame();
-			static void RemoveGame(uint32_t id);
-
-			static GameInfoPtr GetGame(uint32_t id);
-			static void StartGame(uint32_t id);
-
-			// Matchmaking
-			static Matchmaking& StartMatchmaking();
+			using Ptr = std::shared_ptr<Game>;
 
 		private:
-			static std::map<uint32_t, std::unique_ptr<RakNet::Server>> sActiveGames;
+			static Ptr Create(uint32_t id);
 
-			static std::map<uint32_t, GameInfoPtr> sGames;
-			static std::map<std::string, Matchmaking> sMatchmaking;
+			Game(uint32_t id);
+
+		public:
+			~Game();
+
+			bool Start();
+			void Stop();
+
+			Player::Ptr GetPlayer(uint64_t id) const;
+			Player::Ptr AddPlayer(uint64_t id);
+			void RemovePlayer(uint64_t id);
+
+			uint32_t GetId() const;
+
+			const GameInfo& GetInfo() const;
+			GameInfo& GetInfo();
+
+		private:
+			std::unique_ptr<RakNet::Server> mServer;
+			std::unique_ptr<ObjectManager> mObjectManager;
+
+			std::map<uint64_t, Player::Ptr> mPlayers;
+
+			GameInfo mInfo;
+
+			uint32_t mId;
+
+			friend class GameManager;
 	};
 }
 
