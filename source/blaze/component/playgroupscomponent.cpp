@@ -5,6 +5,7 @@
 #include "blaze/client.h"
 #include "blaze/functions.h"
 #include "utils/functions.h"
+#include "utils/logger.h"
 
 #include <iostream>
 

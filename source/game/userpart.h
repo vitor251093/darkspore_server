@@ -69,7 +69,7 @@ namespace Game {
 		std::vector<UserPart> mItems;
 	};
 
-	using UserPartPtr = std::shared_ptr<Game::UserPart>;
+	using UserPartPtr = std::shared_ptr<UserPart>;
 }
 
 #endif

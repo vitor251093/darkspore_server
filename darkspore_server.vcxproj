@@ -151,6 +151,7 @@
     <ClInclude Include="source\blaze\types.h" />
     <ClInclude Include="source\blaze\server.h" />
     <ClInclude Include="source\databuffer.h" />
+    <ClInclude Include="source\game\ability.h" />
     <ClInclude Include="source\game\api.h" />
     <ClInclude Include="source\game\character.h" />
     <ClInclude Include="source\game\config.h" />

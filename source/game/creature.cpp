@@ -237,10 +237,10 @@ namespace Game {
 		mCreatures.emplace_back(creature);
 	}
 
-	Creature::Ptr Creatures::Get(size_t creatureId) const {
-		for (const auto& creature : mCreatures) {
+	Creature* Creatures::Get(size_t creatureId) {
+		for (auto& creature : mCreatures) {
 			if (creature.id == creatureId) {
-				return creature;
+				return &creature;
 			}
 		}
 		return nullptr;

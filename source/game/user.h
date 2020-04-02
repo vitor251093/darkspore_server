@@ -155,16 +155,13 @@ namespace Game {
 			const Squad* GetSquadBySlot(uint32_t slot) const;
 
 			// Creature
-			Creature::Ptr GetCreatureByTemplateId(uint32_t id);
-			Creature::Ptr GetCreatureById(uint32_t id);
+			Creature* GetCreatureByTemplateId(uint32_t id);
+			Creature* GetCreatureById(uint32_t id);
 			
 			void UnlockCreature(uint32_t templateId);
 
-			// Squads
-			void UpdateSquad(uint32_t slot, const std::string& creatureStringList, bool pvp);
-
 			// Upgrades
-			void UnlockUpgrade(uint32_t unlockId);
+			bool UnlockUpgrade(uint32_t unlockId);
 
 			// Rooms
 			const RoomPtr& GetRoom() const;
@@ -194,7 +191,7 @@ namespace Game {
 			uint32_t mState = 0;
 	};
 
-	using UserPtr = std::shared_ptr<Game::User>;
+	using UserPtr = std::shared_ptr<User>;
 }
 
 #endif

@@ -4,11 +4,12 @@
 #include "types.h"
 
 #include "game/user.h"
+#include "game/game.h"
 
 #include "../utils/functions.h"
 #include "../utils/logger.h"
-#include "../game/creature.h"
-#include "game/game.h"
+#include "../game/template.h"
+#include "../repository/user.h"
 
 #include <MessageIdentifiers.h>
 #include <RakSleep.h>
@@ -778,7 +779,7 @@ namespace RakNet {
 			return;
 		}
 
-		auto blazeUser = Game::UserManager::GetUserByAuthToken(std::to_string(blazeId));
+		auto blazeUser = Repository::Users::GetUserByAuthToken(std::to_string(blazeId));
 		if (blazeUser) {
 			std::cout << "Hello " << blazeUser->get_name() << "! " << std::endl;
 		} else {
@@ -852,7 +853,7 @@ namespace RakNet {
 			}
 
 			case 4: {
-				SendObjectCreate(client, 0x0000000A, static_cast<uint32_t>(Game::CreatureID::BlitzAlpha));
+				SendObjectCreate(client, 0x0000000A, static_cast<uint32_t>(Game::CreatureTemplateID::BlitzAlpha));
 				SendPlayerCharacterDeploy(client, 0x0000000A);
 
 				SendPartyMergeComplete(client);
@@ -889,7 +890,7 @@ namespace RakNet {
 				SendGameState(client, gameStateData);
 				SendGameStart(client);
 
-				// SendObjectCreate(client, 0x0000000A, static_cast<uint32_t>(Game::CreatureID::BlitzAlpha));
+				// SendObjectCreate(client, 0x0000000A, static_cast<uint32_t>(Game::CreatureTemplateID::BlitzAlpha));
 				// SendPlayerCharacterDeploy(client, 0x0000000A);
 				
 				break;
@@ -1021,7 +1022,7 @@ namespace RakNet {
 			// SendTutorial(packet);
 			// SendQuickGame(packet);
 
-			// SendObjectCreate(packet, 0x01, static_cast<uint32_t>(Game::CreatureID::BlitzAlpha));
+			// SendObjectCreate(packet, 0x01, static_cast<uint32_t>(Game::CreatureTemplateID::BlitzAlpha));
 			// SendPlayerCharacterDeploy(packet, 0x01);
 		}
 		*/
@@ -1156,7 +1157,7 @@ namespace RakNet {
 		labsCharacter character;
 		{
 			character.assetID = 0x0000000A;
-			character.nounDef = static_cast<uint32_t>(Game::CreatureID::BlitzAlpha);
+			character.nounDef = static_cast<uint32_t>(Game::CreatureTemplateID::BlitzAlpha);
 			character.version = 2;
 			character.mHealthPoints = 100.0f;
 			character.mMaxHealthPoints = 200.0f;
@@ -1165,7 +1166,7 @@ namespace RakNet {
 			player.SetCharacter(std::move(character), 0);
 		} {
 			character.assetID = 0x0000000B;
-			character.nounDef = static_cast<uint32_t>(Game::CreatureID::SageAlpha);
+			character.nounDef = static_cast<uint32_t>(Game::CreatureTemplateID::SageAlpha);
 			character.version = 2;
 			character.mHealthPoints = 100.0f;
 			character.mMaxHealthPoints = 200.0f;
@@ -1174,7 +1175,7 @@ namespace RakNet {
 			player.SetCharacter(std::move(character), 1);
 		} {
 			character.assetID = 0x0000000C;
-			character.nounDef = static_cast<uint32_t>(Game::CreatureID::WraithAlpha);
+			character.nounDef = static_cast<uint32_t>(Game::CreatureTemplateID::WraithAlpha);
 			character.version = 2;
 			character.mHealthPoints = 100.0f;
 			character.mMaxHealthPoints = 200.0f;
@@ -1643,7 +1644,7 @@ namespace RakNet {
 			case 0: {
 				ChainVoteData data;
 
-				// data.mPlayerAsset = static_cast<uint32_t>(Game::CreatureID::BlitzAlpha);;
+				// data.mPlayerAsset = static_cast<uint32_t>(Game::CreatureTemplateID::BlitzAlpha);;
 				for (auto& asset : data.mLevelAssets) {
 					asset = utils::hash_id("nct_minn_su_drainer.noun");
 				}

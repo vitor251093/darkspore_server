@@ -228,6 +228,9 @@
     <ClInclude Include="source\game\userpart.h">
       <Filter>Header Files\game</Filter>
     </ClInclude>
+    <ClInclude Include="source\game\ability.h">
+      <Filter>Header Files\game</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">

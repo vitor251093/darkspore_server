@@ -3,7 +3,6 @@
 #define _GAME_PLAYER_HEADER
 
 // Include
-#include "creature.h"
 #include "raknet/types.h"
 
 // Game

@@ -16,6 +16,8 @@ namespace Repository {
 		public:
 			static std::vector<std::string> GetAllUserNames();
 			static std::vector<std::string> GetLoggedUserNames();
+
+			static Game::UserPtr GetUserById(int64_t id);
 			static Game::UserPtr GetUserByEmail(const std::string& email, const bool shouldLogin);
 			
 			static bool SaveUser(Game::UserPtr userPtr);

@@ -3,7 +3,7 @@
 #define _RAKNET_TYPES_HEADER
 
 // Include
-#include "game/creature.h"
+#include "game/ability.h"
 #include "game/object.h"
 
 #include <BitStream.h>

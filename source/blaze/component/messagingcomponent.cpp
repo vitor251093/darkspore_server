@@ -2,9 +2,11 @@
 // Include
 #include "messagingcomponent.h"
 
+#include "../../repository/user.h"
 #include "blaze/client.h"
 #include "blaze/functions.h"
 #include "utils/functions.h"
+#include "utils/logger.h"
 
 #include "game/user.h"
 
@@ -89,7 +91,7 @@ namespace Blaze {
 	}
 
 	void MessagingComponent::NotifyMessage(Client* client, const ClientMessage& clientMessage) {
-		const auto& user = Game::UserManager::GetUserById(std::get<2>(clientMessage.target));
+		const auto& user = Repository::Users::GetUserById(std::get<2>(clientMessage.target));
 		if (user) {
 			ServerMessage serverMessage;
 			serverMessage.flags = 0;

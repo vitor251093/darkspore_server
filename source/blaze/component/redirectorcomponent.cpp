@@ -3,6 +3,7 @@
 #include "redirectorcomponent.h"
 
 #include "blaze/client.h"
+#include "utils/logger.h"
 
 #include <iostream>
 

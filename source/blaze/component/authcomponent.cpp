@@ -3,6 +3,7 @@
 #include "authcomponent.h"
 #include "usersessioncomponent.h"
 
+#include "../../repository/user.h"
 #include "blaze/client.h"
 #include "blaze/functions.h"
 #include "utils/functions.h"
@@ -878,7 +879,7 @@ namespace Blaze {
 		std::string email    = request["MAIL"].GetString();
 		std::string password = request["PASS"].GetString();
 
-		const auto& user = Game::UserManager::GetUserByEmail(email);
+		const auto& user = Repository::Users::GetUserByEmail(email, true);
 		if (user && user->get_password() == password) {
 			client->set_user(user);
 			SendLogin(client);

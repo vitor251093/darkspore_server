@@ -330,19 +330,19 @@ namespace Game {
 		return squadPtr;
 	}
 
-	Creature::Ptr User::GetCreatureByTemplateId(uint32_t id) {
+	Creature* User::GetCreatureByTemplateId(uint32_t id) {
 		for (auto& creature : mCreatures) {
 			if (creature.nounId == id) {
-				return creature;
+				return &creature;
 			}
 		}
 		return nullptr;
 	}
 
-	Creature::Ptr User::GetCreatureById(uint32_t id) {
+	Creature* User::GetCreatureById(uint32_t id) {
 		for (auto& creature : mCreatures) {
 			if (creature.id == id) {
-				return creature;
+				return &creature;
 			}
 		}
 		return nullptr;
@@ -352,31 +352,6 @@ namespace Game {
 		if (mAccount.creatureRewards > 0) {
 			mCreatures.Add(templateId);
 			mAccount.creatureRewards--;
-		}
-	}
-
-	void User::UpdateSquad(uint32_t slot, const std::string& creatureStringList, bool pvp) {
-		auto squad = mSquads.Get(slot);
-		if (!squad) {
-			// Squad doesn't exist.
-			return;
-		}
-
-		auto creatureIds = utils::explode_string(creatureStringList, ',');
-		auto it = mCreatures.begin();
-		for (const auto& idString : creatureIds) {
-			auto id = utils::to_number<uint32_t>(idString);
-			if (id == 0) {
-				continue;
-			}
-
-			auto creature = mCreatures.Get(id);
-			if (creature) {
-				*it++ = creature;
-				if (it == mCreatures.end()) {
-					break;
-				}
-			}
 		}
 	}
 

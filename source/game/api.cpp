@@ -494,7 +494,7 @@ namespace Game {
 		auto parts = Repository::Parts::ListAll();
 		uint64_t index = 1;
 		for (auto& part : parts) {
-			Repository::UserParts::Add(std::make_shared<Game::UserPart>(actualPartsSize + index++, part->rigblock_asset_id, user->get_account().id));
+			Repository::UserParts::Add(std::make_shared<UserPart>(actualPartsSize + index++, part->rigblock_asset_id, user->get_account().id));
 		}
 		Repository::UserParts::Save();
 
@@ -1056,7 +1056,7 @@ namespace Game {
 				account.WriteXml(docResponse);
 			}
 			else {
-				Game::Account account;
+				Account account;
 				account.WriteXml(docResponse);
 			}
 
@@ -1150,7 +1150,7 @@ namespace Game {
 				}
 			}
 			else {
-				Game::Account account;
+				Account account;
 				account.WriteXml(docResponse);
 
 				if (include_creatures) { docResponse.append_child("creatures"); }
@@ -1307,7 +1307,7 @@ namespace Game {
 
 		const auto& user = session.get_user();
 		if (user) {
-			Creature* creature = user->GetCreatureById(request.uri.parameteru("id"));
+			auto creature = user->GetCreatureById(request.uri.parameteru("id"));
 			if (creature) {
 				creature->WriteXml(docResponse, 0);
 			}
@@ -1331,7 +1331,7 @@ namespace Game {
 		const auto& user = session.get_user();
 		if (user) {
 			auto creatureId = request.uri.parameteru("id");
-			Creature* creature = user->GetCreatureById(creatureId);
+			auto creature = user->GetCreatureById(creatureId);
 			if (creature) {
 				creature->version++;
 				// cost
@@ -1396,7 +1396,7 @@ namespace Game {
 		const auto& user = session.get_user();
 		if (user) {
 			uint32_t creatureID = request.uri.parameteru("id");
-			Creature* creature = user->GetCreatureById(creatureID);
+			auto creature = user->GetCreatureById(creatureID);
 			if (creature) {
 				creature->WriteXml(docResponse, user->get_id());
 			}

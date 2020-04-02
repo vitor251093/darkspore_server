@@ -56,6 +56,15 @@ namespace Repository {
 		return true;
 	}
 
+	Game::UserPtr Users::GetUserById(int64_t id) {
+		for (const auto& [_, user] : sUsersByEmail) {
+			if (user->get_id() == id) {
+				return user;
+			}
+		}
+		return nullptr;
+	}
+
 	Game::UserPtr Users::GetUserByEmail(const std::string& email, const bool shouldLogin) {
 		Game::UserPtr user;
 

@@ -122,4 +122,16 @@ namespace Game {
 		}
 		return value;
 	}
+
+	Squad* Squads::Create() {
+		if (mSquads.size() >= 3) {
+			return nullptr;
+		}
+
+		auto& squad = mSquads.emplace_back();
+		squad.id = static_cast<uint32_t>(mSquads.size());
+		squad.slot = squad.id;
+
+		return &squad;
+	}
 }

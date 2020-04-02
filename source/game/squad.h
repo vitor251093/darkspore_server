@@ -50,6 +50,8 @@ namespace Game {
 			void ReadJson(rapidjson::Value& object);
 			rapidjson::Value WriteJson(rapidjson::Document::AllocatorType& allocator) const;
 
+			Squad* Create();
+
 		private:
 			std::vector<Squad> mSquads;
 	};
