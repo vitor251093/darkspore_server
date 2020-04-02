@@ -82,6 +82,7 @@ namespace Repository {
 			}
 		}
 
+		user->set_auth_token("ABCDEFGHIJKLMNOPQRSTUVWXYZ"); // TODO: Remove workaround later
 		return user;
 	}
 

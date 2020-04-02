@@ -378,8 +378,6 @@ namespace Blaze {
 	}
 
 	void AuthComponent::SendAuthToken(Client* client, const std::string& token) {
-		client->get_user()->set_auth_token(token);
-
 		TDF::Packet packet;
 		packet.put_string("AUTH", token);
 
@@ -866,7 +864,7 @@ namespace Blaze {
 		const auto& user = client->get_user();
 		if (user) {
 			logger::info("Send real auth token");
-			SendAuthToken(client, std::to_string(user->get_id()));
+			SendAuthToken(client, user->get_auth_token());
 		} else {
 			logger::info("Send fake auth token");
 			SendAuthToken(client, "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
