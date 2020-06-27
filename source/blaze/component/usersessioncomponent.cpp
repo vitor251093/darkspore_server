@@ -256,13 +256,10 @@ namespace Blaze {
 		const auto& data = client->data();
 
 		TDF::Packet packet;
-		packet.put_integer("IITO", data.iito ? 1 : 0);
-		packet.put_integer("LANG", data.lang);
-		packet.put_string("SVCN", data.svcn);
-		packet.put_integer("TYPE", data.type);
+		data.Write(packet);
 
 		header.error_code = 0;
-		client->reply(std::move(header));
+		client->reply(std::move(header), packet);
 	}
 
 	void UserSessionComponent::WriteUserSessionExtendedData(Client* client, TDF::Packet& packet) {

@@ -4,12 +4,14 @@
 #include "config.h"
 #include "leaderboard.h"
 
-#include "../main.h"
-
 #include "../http/session.h"
 #include "../http/router.h"
 #include "../http/uri.h"
 #include "../http/multipart.h"
+
+#include "../sporenet/instance.h"
+#include "../sporenet/user.h"
+#include "../sporenet/creature.h"
 
 #include "../repository/template.h"
 #include "../repository/user.h"
@@ -20,11 +22,14 @@
 #include "../utils/logger.h"
 #include "../utils/eawebkit.h"
 
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include <boost/beast/version.hpp>
 
 #include <iostream>
+#include <iomanip>
 #include <filesystem>
-#include <stdlib.h>
 
 /*
 	api.account.auth
@@ -98,6 +103,34 @@
 
 */
 
+// XML Writer
+struct xml_string_writer : pugi::xml_writer {
+	std::string result;
+
+	void write(const void* data, size_t size) override {
+		result.append(static_cast<const char*>(data), size);
+	}
+};
+
+std::map<std::string, std::string> parse_cookies(HTTP::Request& request) {
+	std::map<std::string, std::string> data;
+
+	auto cookies = request.data[boost::beast::http::field::cookie];
+	if (cookies.empty()) {
+		return data;
+	}
+
+	auto cookieList = utils::explode_string(';' + cookies.to_string(), ';');
+	for (const auto& cookie : cookieList) {
+		auto cookieData = utils::explode_string(cookie, '=');
+		if (cookieData.size() == 2) {
+			data.emplace(cookieData[0], cookieData[1]);
+		}
+	}
+
+	return data;
+}
+
 // Game
 namespace Game {
 	constexpr std::string_view skipLauncherScript = R"(
@@ -145,7 +178,7 @@ namespace Game {
 	}
 
 	void API::setup() {
-		const auto& router = Application::GetApp().get_http_server()->get_router();
+		const auto& router = GetApp().get_http_server()->get_router();
 
 		// Routing
 		router->add("/api", { boost::beast::http::verb::get, boost::beast::http::verb::post }, [](HTTP::Session& session, HTTP::Response& response) {
@@ -154,7 +187,7 @@ namespace Game {
 
 		// ReCap
 		router->add("/recap/api", { boost::beast::http::verb::get, boost::beast::http::verb::post }, [this](HTTP::Session& session, HTTP::Response& response) {
-			auto& request = session.get_request();
+			const auto& request = session.get_request();
 
 			auto method = request.uri.parameter("method");
 			     if (method == "api.launcher.setTheme")   { recap_launcher_setTheme(session, response); }
@@ -214,49 +247,41 @@ namespace Game {
 
 		// Game
 		router->add("/game/api", { boost::beast::http::verb::get, boost::beast::http::verb::post }, [this](HTTP::Session& session, HTTP::Response& response) {
+			// TODO: fix all of these things, its so ugly
 			auto& request = session.get_request();
 
 			if (request.data.method() == boost::beast::http::verb::post) {
-				// Fetch boundary later from request.data[boost::beast::http::field::content_type]
-
+				// TODO: Fetch boundary later from request.data[boost::beast::http::field::content_type]
+				
 				HTTP::Multipart multipart(request.data.body(), "EA_HTTP_REQUEST_SIMPLE_BOUNDARY");
-				for (const auto& [name, value] : multipart) {
+				for (const auto&[name, value] : multipart) {
 					request.uri.set_parameter(name, value);
 				}
 			}
 
+			// TODO: cookie handler
 			auto cookies = request.data[boost::beast::http::field::cookie];
 			if (!cookies.empty()) {
-				auto cookieList = boost::beast::http::param_list(";" + cookies.to_string());
-				for (auto& [name, value] : request.uri) {
-					if (value == "cookie") {
-						for (const auto& param : cookieList) {
-							if (std::strncmp(param.first.data(), name.c_str(), name.length()) == 0) {
-								value = param.second.to_string();
-								break;
-							}
+				auto cookieMap = parse_cookies(request);
+				for (const auto& [name, value] : cookieMap) {
+					auto it = request.uri.find(name);
+					if (it != request.uri.end()) {
+						if (it->second == "cookie") {
+							it->second = value;
 						}
 					}
-					logger::info(" - " + name + " = " + value);
 				}
-				logger::info("");
 			}
+
+			for (auto& [name, value] : request.uri) {
+				std::cout << name << " = " << value << std::endl;
+			}
+			std::cout << std::endl;
 
 			auto version = request.uri.parameter("version");
 			auto build = request.uri.parameter("build");
-			session.set_darkspore_version(build);
-
-			auto method = request.uri.parameter("method");
-			if (method.empty()) {
-				if (request.uri.parameter("token") == "cookie") {
-					method = "api.account.auth";
-				}
-				else {
-					method = "api.account.getAccount";
-				}
-			}
-
 			auto token = request.uri.parameter("token");
+			
 			if (!token.empty()) {
 				const auto& user = Repository::Users::GetUserByAuthToken(token);
 				if (user) {
@@ -264,8 +289,9 @@ namespace Game {
 				}
 			}
 
+			auto method = request.uri.parameter("method");
 			if (method.empty()) {
-				if (request.uri.parameter("token") == "cookie") {
+				if (token.empty()) {
 					method = "api.account.auth";
 				} else {
 					method = "api.account.getAccount";
@@ -295,8 +321,10 @@ namespace Game {
 			else if (method == "api.creature.getCreature")       { game_creature_getCreature(session, response); }
 			else if (method == "api.creature.getTemplate")       { game_creature_getTemplate(session, response); }
 			else if (method == "api.creature.resetCreature")     { game_creature_resetCreature(session, response); }
-			else if (method == "api.creature.updateCreature")    { game_creature_updateCreature(session, response); }
 			else if (method == "api.creature.unlockCreature")    { game_creature_unlockCreature(session, response); }
+			else if (method == "api.creature.updateCreature")    { game_creature_updateCreature(session, response); }
+			else if (method == "api.deck.updateDecks")           { game_deck_updateDecks(session, response); } 
+			else if (method == "api.game.log")                   { recap_game_log(session, response); } 
 			else {
 				logger::error("Undefined /game/api method: " + method);
 				for (const auto& [name, value] : request.uri) {
@@ -501,38 +529,39 @@ namespace Game {
 		// TODO: Unlocking all creatures from start to test; remove that in the future
 		std::vector<Repository::CreatureTemplatePtr> templates = Repository::CreatureTemplates::ListAll();
 		user->get_account().creatureRewards = templates.size();
-		for (auto &templateCreature: templates) {
+		for (auto& templateCreature: templates) {
 			user->UnlockCreature(templateCreature->id);
 		}
 
 		// TODO: Unlocking everything from start to test; remove that in the future
-		user->get_account().tutorialCompleted = false;
-		user->get_account().chainProgression = 24;
-		user->get_account().creatureRewards = 100;
-		user->get_account().currentGameId = 1;
-		user->get_account().currentPlaygroupId = 1;
-		user->get_account().defaultDeckPveId = 1;
-		user->get_account().defaultDeckPvpId = 1;
-		user->get_account().level = 100;
-		user->get_account().avatarId = avatar;
-		user->get_account().dna = 10000000;
-		user->get_account().newPlayerInventory = 1;
-		user->get_account().newPlayerProgress = 9500;
-		user->get_account().cashoutBonusTime = 1;
-		user->get_account().starLevel = 10;
-		user->get_account().unlockCatalysts = 1;
-		user->get_account().unlockDiagonalCatalysts = 1;
-		user->get_account().unlockFuelTanks = 1;
-		user->get_account().unlockInventory = 1;
-		user->get_account().unlockPveDecks = 2;
-		user->get_account().unlockPvpDecks = 1;
-		user->get_account().unlockStats = 1,
-		user->get_account().unlockInventoryIdentify = 250000;
-		user->get_account().unlockEditorFlairSlots = 1;
-		user->get_account().upsell = 1;
-		user->get_account().xp = 10000;
-		user->get_account().grantAllAccess = true;
-		user->get_account().grantOnlineAccess = true;
+		auto account = user->get_account();
+		account.tutorialCompleted = false;
+		account.chainProgression = 24;
+		account.creatureRewards = 100;
+		account.currentGameId = 1;
+		account.currentPlaygroupId = 1;
+		account.defaultDeckPveId = 1;
+		account.defaultDeckPvpId = 1;
+		account.level = 100;
+		account.avatarId = avatar;
+		account.dna = 10000000;
+		account.newPlayerInventory = 1;
+		account.newPlayerProgress = 9500;
+		account.cashoutBonusTime = 1;
+		account.starLevel = 10;
+		account.unlockCatalysts = 1;
+		account.unlockDiagonalCatalysts = 1;
+		account.unlockFuelTanks = 1;
+		account.unlockInventory = 1;
+		account.unlockPveDecks = 2;
+		account.unlockPvpDecks = 1;
+		account.unlockStats = 1,
+		account.unlockInventoryIdentify = 250000;
+		account.unlockEditorFlairSlots = 1;
+		account.upsell = 1;
+		account.xp = 10000;
+		account.grantAllAccess = true;
+		account.grantOnlineAccess = true;
 
 		for (uint16_t squadSlot = 1; squadSlot <= 3; squadSlot++) {
 			uint16_t templateId = squadSlot - 1;
@@ -652,7 +681,7 @@ namespace Game {
 			if (auto config = configs.append_child("config")) {
 				utils::xml::Set(config, "blaze_service_name", "darkspore");  // Directly linked to BlazeServiceName
 				utils::xml::Set(config, "blaze_secure", "Y"); // Directly linked to BlazeSecure
-				utils::xml::Set(config, "blaze_env", "dev"); // Directly linked to BlazeEnvironment, can be { prod, beta, cert, test, dev }
+				utils::xml::Set(config, "blaze_env", "prod"); // Directly linked to BlazeEnvironment, can be { prod, beta, cert, test, dev }
 				utils::xml::Set(config, "sporenet_cdn_host", host);
 				utils::xml::Set(config, "sporenet_cdn_port", "80");
 				utils::xml::Set(config, "sporenet_db_host", host);
@@ -1056,7 +1085,7 @@ namespace Game {
 				account.WriteXml(docResponse);
 			}
 			else {
-				Account account;
+				SporeNet::Account account;
 				account.WriteXml(docResponse);
 			}
 
@@ -1150,7 +1179,7 @@ namespace Game {
 				}
 			}
 			else {
-				Account account;
+				SporeNet::Account account;
 				account.WriteXml(docResponse);
 
 				if (include_creatures) { docResponse.append_child("creatures"); }

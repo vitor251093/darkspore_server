@@ -329,36 +329,17 @@ namespace Blaze {
 		logger::info("Client 0 pre-authenticating");
 
 		const auto& request = client->get_request();
-		const auto& clientData = request["CDAT"];
 		const auto& clientInfo = request["CINF"];
 
 		auto& data = client->data();
-		data.iito = clientData["IITO"].GetUint() != 0;
-		data.lang = clientData["LANG"].GetUint();
-		data.svcn = clientData["SVCN"].GetString();
-		data.type = static_cast<ClientType>(clientData["TYPE"].GetUint());
+		data.Read(request["CDAT"]);
 
 		TDF::Packet packet;
 		packet.put_string("ASRC", "321915");
 
 		/*
-			0:
-			1:
-			2:
-			3:
-			4:
-			5:
-			6:
-			7:
-			8:
-			9:
-			10:
-			11:
-			12: player id?
-			etc
-
-			OLD
-				{ 1, 25, 4, 27, 28, 6, 7, 9, 10, 11, 30720, 30721, 30722, 30723, 20, 30725, 30726, 2000 }
+			completely unknown what this does...
+			OLD { 1, 25, 4, 27, 28, 6, 7, 9, 10, 11, 30720, 30721, 30722, 30723, 20, 30725, 30726, 2000 }
 		*/
 		packet.push_list("CIDS", TDF::Type::Integer);
 		for (auto cid : { 1, 25, 4, 27, 28, 6, 7, 9, 10, 11, 30720, 30721, 55, 30723, 20, 30725, 30726, 2000 }) {
@@ -398,41 +379,31 @@ namespace Blaze {
 		}
 		packet.pop();
 
-		packet.put_string("INST", data.svcn);
+		packet.put_string("INST", data.serviceName);
 		packet.put_string("NASP", "cem_ea_id");
 		packet.put_string("PILD", "");
 		packet.put_string("PLAT", clientInfo["PLAT"].GetString());
 		
 		packet.push_struct("QOSS");
 		{
-			packet.push_struct("BWPS");
-			packet.put_string("PSA", "127.0.0.1");
-			packet.put_integer("PSP", 17502);
-			packet.put_string("SNA", "ams");
-			packet.pop();
+			QosConfigInfo qosConfig;
+			qosConfig.lnp = 10;
+			qosConfig.svid = 1; // server id?
+			
+			QosPingSiteInfo& qosPingSiteInfo = qosConfig.pingSiteInfoByAlias.try_emplace("ams").first->second;
+			qosPingSiteInfo.address = "127.0.0.1";
+			qosPingSiteInfo.port = 17502;
+			qosPingSiteInfo.name = "ams";
 
-			packet.put_integer("LNP", 10);
-
-			packet.push_map("LTPS", TDF::Type::String, TDF::Type::Struct);
-			{
-				packet.push_struct("ams");
-				packet.put_string("PSA", "127.0.0.1");
-				packet.put_integer("PSP", 17502);
-				packet.put_string("SNA", "ams");
-				packet.pop();
-			}
-			packet.pop();
+			qosConfig.Write(packet);
 		}
 		packet.pop();
 
 		packet.put_string("RSRC", "321915");
 		packet.put_string("SVER", "Blaze 3.9.3.1");
 
-		DataBuffer outBuffer;
-		packet.Write(outBuffer);
-
 		header.error_code = 0;
-		client->reply(header, outBuffer);
+		client->reply(std::move(header), packet);
 	}
 
 	void UtilComponent::PostAuth(Client* client, Header header) {

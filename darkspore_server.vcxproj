@@ -119,7 +119,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <PreprocessorDefinitions>_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;_WIN32_WINNT=0x0601;_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;NOMINMAX;BOOST_NETWORK_ENABLE_HTTPS;RAPIDJSON_HAS_STDSTRING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;_WIN32_WINNT=0x0601;_CRT_SECURE_NO_WARNINGS;WIN32_LEAN_AND_MEAN;NOMINMAX;BOOST_NETWORK_ENABLE_HTTPS;BOOST_ASIO_DISABLE_CONCEPTS;RAPIDJSON_HAS_STDSTRING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -158,14 +158,13 @@
     <ClInclude Include="source\game\creature.h" />
     <ClInclude Include="source\game\game.h" />
     <ClInclude Include="source\game\gamemanager.h" />
+    <ClInclude Include="source\game\instance.h" />
     <ClInclude Include="source\game\leaderboard.h" />
     <ClInclude Include="source\game\object.h" />
     <ClInclude Include="source\game\objectmanager.h" />
     <ClInclude Include="source\game\part.h" />
     <ClInclude Include="source\game\party.h" />
     <ClInclude Include="source\game\player.h" />
-    <ClInclude Include="source\game\room.h" />
-    <ClInclude Include="source\game\userpart.h" />
     <ClInclude Include="source\game\squad.h" />
     <ClInclude Include="source\game\template.h" />
     <ClInclude Include="source\game\user.h" />
@@ -176,15 +175,20 @@
     <ClInclude Include="source\http\uri.h" />
     <ClInclude Include="source\main.h" />
     <ClInclude Include="source\network\client.h" />
+    <ClInclude Include="source\predefined.h" />
     <ClInclude Include="source\raknet\client.h" />
     <ClInclude Include="source\raknet\server.h" />
     <ClInclude Include="source\raknet\types.h" />
+    <ClInclude Include="source\sporenet\creature.h" />
+    <ClInclude Include="source\sporenet\instance.h" />
+    <ClInclude Include="source\sporenet\room.h" />
+    <ClInclude Include="source\sporenet\squad.h" />
+    <ClInclude Include="source\sporenet\user.h" />
     <ClInclude Include="source\repository\userpart.h" />
     <ClInclude Include="source\repository\part.h" />
     <ClInclude Include="source\repository\template.h" />
     <ClInclude Include="source\repository\user.h" />
     <ClInclude Include="source\tcptest.h" />
-    <ClInclude Include="source\udptest.h" />
     <ClInclude Include="source\utils\base64.h" />
     <ClInclude Include="source\utils\eawebkit.h" />
     <ClInclude Include="source\utils\functions.h" />
@@ -214,13 +218,12 @@
     <ClCompile Include="source\game\creature.cpp" />
     <ClCompile Include="source\game\game.cpp" />
     <ClCompile Include="source\game\gamemanager.cpp" />
+    <ClCompile Include="source\game\instance.cpp" />
     <ClCompile Include="source\game\leaderboard.cpp" />
     <ClCompile Include="source\game\object.cpp" />
     <ClCompile Include="source\game\objectmanager.cpp" />
     <ClCompile Include="source\game\party.cpp" />
     <ClCompile Include="source\game\player.cpp" />
-    <ClCompile Include="source\game\room.cpp" />
-    <ClCompile Include="source\game\userpart.cpp" />
     <ClCompile Include="source\game\part.cpp" />
     <ClCompile Include="source\game\squad.cpp" />
     <ClCompile Include="source\game\template.cpp" />
@@ -239,6 +242,11 @@
     <ClCompile Include="source\repository\part.cpp" />
     <ClCompile Include="source\repository\template.cpp" />
     <ClCompile Include="source\repository\user.cpp" />
+    <ClCompile Include="source\sporenet\creature.cpp" />
+    <ClCompile Include="source\sporenet\instance.cpp" />
+    <ClCompile Include="source\sporenet\room.cpp" />
+    <ClCompile Include="source\sporenet\squad.cpp" />
+    <ClCompile Include="source\sporenet\user.cpp" />
     <ClCompile Include="source\tcptest.cpp" />
     <ClCompile Include="source\udptest.cpp" />
     <ClCompile Include="source\utils\base64.cpp" />

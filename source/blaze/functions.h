@@ -9,6 +9,18 @@
 
 // Blaze
 namespace Blaze {
+	struct ClientData {
+		std::string serviceName;
+
+		Blaze::ClientType type;
+		uint32_t lang;
+
+		bool iito;
+
+		void Read(const rapidjson::Value& value);
+		void Write(TDF::Packet& packet) const;
+	};
+
 	struct IpAddress {
 		uint32_t address;
 		uint16_t port;
@@ -217,6 +229,84 @@ namespace Blaze {
 		uint32_t permissions;
 
 		uint8_t slot;
+
+		void Write(TDF::Packet& packet) const;
+	};
+
+	struct PlayerConnectionStatus {
+		int64_t id;
+
+		uint32_t flags;
+
+		ConnectionStatus status;
+
+		void Read(const rapidjson::Value& value);
+		void Write(TDF::Packet& packet) const;
+	};
+
+	struct ReplicatedGamePlayer {
+		object_id ugid;
+
+		std::string name;
+
+		IpPairAddress hostNetwork;
+
+		int64_t id;
+		int64_t time;
+
+		uint32_t gameId;
+		uint32_t localization;
+		uint32_t uid;
+
+		uint16_t tIndex;
+
+		uint8_t slot;
+
+		Slot slotType;
+		PlayerState state;
+
+
+		void Write(TDF::Packet& packet) const;
+	};
+
+	struct ReplicatedGameData {
+		std::map<std::string, std::string> attributes;
+		std::map<std::string, std::string> criteria;
+		
+		std::vector<int64_t> administrators;
+		std::vector<uint16_t> capacity;
+		std::vector<uint16_t> tids;
+
+		std::string name;
+		std::string type;
+		std::string playgroupId;
+		std::string psas;
+		std::string uuid;
+		std::string version;
+
+		IpPairAddress hostNetwork;
+		NetworkQosData networkQos;
+		HostInfo pHost;
+		HostInfo tHost;
+
+		uint64_t gpvh; // ?
+		uint64_t gsid; // ?
+
+		uint32_t id;
+		uint32_t settings;
+		uint32_t hses;
+		uint32_t seed;
+
+		uint16_t maxPlayers;
+		uint16_t queueCapacity;
+		uint16_t tcap;
+
+		GameState state;
+		GameNetworkTopology networkTopology;
+		PresenceMode presence;
+
+		bool ignore;
+		bool resetable;
 
 		void Write(TDF::Packet& packet) const;
 	};

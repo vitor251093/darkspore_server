@@ -134,4 +134,17 @@ namespace Game {
 
 		return &squad;
 	}
+
+	void Squads::Remove(size_t index) {
+		if (index < mSquads.size()) {
+			mSquads.erase(mSquads.begin() + index);
+		}
+	}
+
+	Squad* Squads::Get(size_t index) {
+		if (index < mSquads.size()) {
+			return &mSquads[index];
+		}
+		return nullptr;
+	}
 }

@@ -12,14 +12,14 @@ namespace Game {
 	// ObjectManager
 	class ObjectManager {
 		public:
-			Object::Ptr GetObject(uint32_t id) const;
-			Object::Ptr CreateObject();
+			ObjectPtr GetObject(uint32_t id) const;
+			ObjectPtr CreateObject(uint32_t noun);
 
 		private:
 			void RemoveObject(Object* object);
 
 		private:
-			std::map<uint32_t, Object::Ptr::weak_type> mObjects;
+			std::map<uint32_t, ObjectPtr::weak_type> mObjects;
 			std::vector<uint32_t> mOpenIndexes;
 
 			friend class Object;

@@ -61,11 +61,14 @@
     <Filter Include="Header Files\repository">
       <UniqueIdentifier>{3b5185e0-97aa-444f-8e85-9ac6c458649b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\sporenet">
+      <UniqueIdentifier>{641d1a99-0df1-4411-a8d4-6e36aa5a4b53}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\sporenet">
+      <UniqueIdentifier>{04a12394-d603-48ec-aa2e-d2d24e574bf2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="source\udptest.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="source\tcptest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -189,6 +192,27 @@
     <ClInclude Include="source\blaze\functions.h">
       <Filter>Header Files\blaze</Filter>
     </ClInclude>
+    <ClInclude Include="source\predefined.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sporenet\creature.h">
+      <Filter>Header Files\sporenet</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sporenet\squad.h">
+      <Filter>Header Files\sporenet</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sporenet\user.h">
+      <Filter>Header Files\sporenet</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sporenet\instance.h">
+      <Filter>Header Files\sporenet</Filter>
+    </ClInclude>
+    <ClInclude Include="source\sporenet\room.h">
+      <Filter>Header Files\sporenet</Filter>
+    </ClInclude>
+    <ClInclude Include="source\game\instance.h">
+      <Filter>Header Files\game</Filter>
+    </ClInclude>
     <ClInclude Include="source\utils\logger.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
@@ -234,9 +258,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="source\udptest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="source\tcptest.cpp">
@@ -390,6 +411,24 @@
       <Filter>Source Files\repository</Filter>
     </ClCompile>
     <ClCompile Include="source\game\userpart.cpp">
+      <Filter>Source Files\game</Filter>
+    </ClCompile>
+    <ClCompile Include="source\sporenet\creature.cpp">
+      <Filter>Source Files\sporenet</Filter>
+    </ClCompile>
+    <ClCompile Include="source\sporenet\squad.cpp">
+      <Filter>Source Files\sporenet</Filter>
+    </ClCompile>
+    <ClCompile Include="source\sporenet\user.cpp">
+      <Filter>Source Files\sporenet</Filter>
+    </ClCompile>
+    <ClCompile Include="source\sporenet\instance.cpp">
+      <Filter>Source Files\sporenet</Filter>
+    </ClCompile>
+    <ClCompile Include="source\sporenet\room.cpp">
+      <Filter>Source Files\sporenet</Filter>
+    </ClCompile>
+    <ClCompile Include="source\game\instance.cpp">
       <Filter>Source Files\game</Filter>
     </ClCompile>
   </ItemGroup>

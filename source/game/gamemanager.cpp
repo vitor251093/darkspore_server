@@ -6,10 +6,10 @@
 // Game
 namespace Game {
 	// GameManager
-	std::map<uint32_t, Game::Ptr> GameManager::sGames;
+	std::map<uint32_t, InstancePtr> GameManager::sGames;
 	std::map<std::string, Matchmaking> GameManager::sMatchmaking;
 
-	Game::Ptr GameManager::CreateGame() {
+	InstancePtr GameManager::CreateGame() {
 		uint32_t id;
 		if (sGames.empty()) {
 			id = 1;
@@ -17,7 +17,7 @@ namespace Game {
 			id = sGames.rbegin()->first + 1;
 		}
 
-		auto game = Game::Create(id);
+		auto game = Instance::Create(id);
 		sGames[game->GetId()] = game;
 		return game;
 	}
@@ -29,7 +29,7 @@ namespace Game {
 		}
 	}
 
-	Game::Ptr GameManager::GetGame(uint32_t id) {
+	InstancePtr GameManager::GetGame(uint32_t id) {
 		auto it = sGames.find(id);
 		return (it != sGames.end()) ? it->second : nullptr;
 	}

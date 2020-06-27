@@ -74,10 +74,10 @@ namespace Game {
 			void Add(uint32_t templateId);
 			void Add(Creature creature);
 
-			Creature* Get(size_t creatureId);
+			Creature::Ptr Get(size_t creatureId) const;
 
 		private:
-			std::vector<Creature> mCreatures;
+			std::vector<Creature::Ptr> mCreatures;
 	};
 }
 

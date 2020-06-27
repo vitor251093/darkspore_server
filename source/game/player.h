@@ -3,68 +3,49 @@
 #define _GAME_PLAYER_HEADER
 
 // Include
-#include "raknet/types.h"
+#include "predefined.h"
+#include "object.h"
 
 // Game
 namespace Game {
 	// Player
 	class Player {
 		public:
-			using Ptr = std::shared_ptr<Player>;
+			Player(Instance& instance, uint8_t playerIndex, uint64_t blazeId);
 
-			Player(uint64_t blazeId);
+			RakNet::labsPlayer& GetData();
+			const RakNet::labsPlayer& GetData() const;
 
-			const RakNet::labsCrystal& GetCrystal(size_t index) const;
-			void SetCrystal(const RakNet::labsCrystal& crystal, size_t index);
-			void SetCrystal(RakNet::labsCrystal&& crystal, size_t index);
+			uint8_t GetId() const;
+
+			void SetStatus(uint32_t status, float progress);
+
+			const ObjectPtr& GetCharacterObject(uint32_t index) const;
+
+			const RakNet::labsCharacter& GetCharacter(uint32_t index) const;
+			void SetCharacter(RakNet::labsCharacter&& character, uint32_t index);
+
+			const RakNet::labsCrystal& GetCrystal(uint32_t index) const;
+			void SetCrystal(RakNet::labsCrystal&& crystal, uint32_t index);
+
+			uint16_t GetUpdateBits() const;
+			void SetUpdateBits(uint16_t bits);
+			void ResetUpdateBits();
 
 		private:
 			void UpdateCrystalBonuses();
 
 		private:
-			std::array<RakNet::labsCharacter, 3> mCharacters;
-			std::array<RakNet::labsCrystal, 9> mCrystals;
-			std::array<bool, 8> mCrystalBonuses;
+			Instance& mInstance;
 
-			uint64_t mBlazeId;
-
-			uint8_t mTeam;
+			std::array<ObjectPtr, 3> mCharacterObjects;
 
 			RakNet::labsPlayer mData;
 
-			// properties
-			/*
-			uint32_t mDataBits = 0;
-
-			// fields
-			bool mbDataSetup = false;
-			int32_t mCurrentDeckIndex = 0;
-			int32_t mQueuedDeckIndex = 0;
-			std::array<labsCharacter, 3> mCharacters;
-			uint8_t mPlayerIndex = 0;
-			uint8_t mTeam = 0;
-			uint64_t mPlayerOnlineId = 0;
-			uint32_t mStatus = 0;
-			float mStatusProgress = 0.f;
-			tObjID mCurrentCreatureId = 0;
-			float mEnergyPoints = 0.f;
-			bool mbIsCharged = false;
-			int32_t mDNA = 0;
-
-			std::array<labsCrystal, 9> mCrystals;
-			std::array<bool, 8> mCrystalBonuses;
-
-			uint32_t mAvatarLevel = 0;
-			float mAvatarXP = 0.f;
-			uint32_t mChainProgression = 0;
-			bool mLockCamera = false;
-			bool mbLockedOverdrive = false;
-			bool mbLockedCrystals = false;
-			uint32_t mLockedAbilityMin;
-			uint32_t mLockedDeckIndexMin;
-			uint32_t mDeckScore;
-			*/
+			uint16_t mUpdateBits = 0;
 	};
+
+	using PlayerPtr = std::shared_ptr<Player>;
 }
 
 #endif

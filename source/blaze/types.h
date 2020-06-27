@@ -186,12 +186,12 @@ namespace Blaze {
 	enum class PresenceState {
 		Offline = 0,
 		Online_Web,
-		Online_Client,
-		Online_Client_Mode1,
-		Online_Client_Mode2,
-		Online_Client_Mode3,
-		Online_Client_Mode4,
-		Online_Client_Mode5
+		Online_Lobby,
+		Online_Collection,
+		Online_Navigation,
+		Online_Chain,
+		Online_Arena,
+		Online_Editor
 	};
 
 	enum class PlaygroupJoinState {
@@ -225,6 +225,12 @@ namespace Blaze {
 		SYS_CREATION_FAILED,
 		HOST_LEAVING,
 		TITLE_REASON_BASE_GAME_DESTRUCTION_REASON
+	};
+
+	enum class ConnectionStatus {
+		Disconnected = 0,
+		EstablishingConnection,
+		Connected
 	};
 
 	// Header

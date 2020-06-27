@@ -3,7 +3,7 @@
 #define _GAME_GAME_MANAGER_HEADER
 
 // Include
-#include "game.h"
+#include "instance.h"
 
 #include <cstdint>
 #include <string>
@@ -20,17 +20,17 @@ namespace Game {
 	class GameManager {
 		public:
 			// Game
-			static Game::Ptr CreateGame();
+			static InstancePtr CreateGame();
 			static void RemoveGame(uint32_t id);
 
-			static Game::Ptr GetGame(uint32_t id);
+			static InstancePtr GetGame(uint32_t id);
 			static void StartGame(uint32_t id);
 
 			// Matchmaking
 			static Matchmaking& StartMatchmaking();
 
 		private:
-			static std::map<uint32_t, Game::Ptr> sGames;
+			static std::map<uint32_t, InstancePtr> sGames;
 			static std::map<std::string, Matchmaking> sMatchmaking;
 	};
 }

@@ -5,14 +5,14 @@
 // Game
 namespace Game {
 	// ObjectManager
-	Object::Ptr ObjectManager::GetObject(uint32_t id) const {
+	ObjectPtr ObjectManager::GetObject(uint32_t id) const {
 		auto it = mObjects.find(id);
 		return (it != mObjects.end()) ? it->second.lock() : nullptr;
 	}
 
-	Object::Ptr ObjectManager::CreateObject() {
+	ObjectPtr ObjectManager::CreateObject(uint32_t noun) {
 		uint32_t id;
-		if (mOpenIndexes.empty()) {
+		if (!mOpenIndexes.empty()) {
 			id = mOpenIndexes.back();
 			mOpenIndexes.pop_back();
 		} else if (mObjects.empty()) {
@@ -21,9 +21,10 @@ namespace Game {
 			id = mObjects.begin()->first + 1;
 		}
 
+		// TODO: make this never fail
 		auto it = mObjects.try_emplace(id);
 		if (it.second) {
-			auto object = Object::Create(*this, id);
+			auto object = ObjectPtr(new Object(*this, id, noun));
 			it.first->second = object;
 			return std::move(object);
 		}

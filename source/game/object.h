@@ -3,44 +3,46 @@
 #define _GAME_OBJECT_HEADER
 
 // Include
-#include <cstdint>
-#include <memory>
+#include "raknet/types.h"
 
 // Game
 namespace Game {
 	class ObjectManager;
 
-	// Position
-	struct Position {
-		float x, y, z;
-	};
-
 	// Object
 	class Object {
-		public:
-			using Ptr = std::shared_ptr<Object>;
-
 		private:
-			static Ptr Create(ObjectManager& manager, uint32_t id);
-
-			Object(ObjectManager& manager, uint32_t id);
+			Object(ObjectManager& manager, uint32_t id, uint32_t noun);
 
 		public:
 			~Object();
 
-			const Position& GetPosition() const;
-			void SetPosition(const Position& position);
-			void SetPosition(Position&& position);
+			RakNet::sporelabsObject& GetData();
+			const RakNet::sporelabsObject& GetData() const;
+
+			uint32_t GetId() const;
+			uint32_t GetNoun() const;
+
+			const RakNet::cSPVector3& GetPosition() const;
+			void SetPosition(const RakNet::cSPVector3& position);
+			void SetPosition(RakNet::cSPVector3&& position);
+
+			const RakNet::cSPQuaternion& GetOrientation() const;
+			void SetOrientation(const RakNet::cSPQuaternion& orientation);
+			void SetOrientation(RakNet::cSPQuaternion&& orientation);
 
 		protected:
 			ObjectManager& mManager;
 
-			Position mPosition;
+			RakNet::sporelabsObject mData;
 		
 			uint32_t mId;
+			uint32_t mNoun;
 
 			friend class ObjectManager;
 	};
+
+	using ObjectPtr = std::shared_ptr<Object>;
 }
 
 #endif

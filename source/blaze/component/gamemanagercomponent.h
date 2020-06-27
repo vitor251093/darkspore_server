@@ -3,12 +3,8 @@
 #define _BLAZE_COMPONENT_GAMEMANAGER_HEADER
 
 // Include
+#include "predefined.h"
 #include "blaze/tdf.h"
-
-// Predefined
-namespace Game {
-	class Game;
-}
 
 // Blaze
 namespace Blaze {
@@ -53,8 +49,8 @@ namespace Blaze {
 			static void ResetDedicatedServer(Client* client, Header header);
 			static void UpdateMeshConnection(Client* client, Header header);
 
-			static void WriteGameData(Client* client, const Game::Game& game, TDF::Packet& packet, const std::string& playgroupId);
-			static void WriteGameRequest(Client* client, const Game::Game& game, TDF::Packet& packet);
+			static void WriteGameData(Client* client, const Game::Instance& game, TDF::Packet& packet, const std::string& playgroupId);
+			static void WriteGameRequest(Client* client, const Game::Instance& game, TDF::Packet& packet);
 	};
 }
 

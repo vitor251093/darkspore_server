@@ -4,20 +4,13 @@
 
 // Include
 #include "types.h"
-#include "tdf.h"
+#include "functions.h"
 
 #include "../network/client.h"
-#include "../game/user.h"
+
+#include "../sporenet/user.h"
 
 #include <boost/asio/ssl.hpp>
-
-// ClientData
-struct ClientData {
-	std::string svcn;
-	Blaze::ClientType type;
-	uint32_t lang;
-	bool iito;
-};
 
 // Blaze
 namespace Blaze {
@@ -30,8 +23,8 @@ namespace Blaze {
 
 			auto get_id() const { return mId; }
 
-			const auto& get_user() const { return mUser; }
-			void set_user(const Game::UserPtr& user) { mUser = user; }
+			const SporeNet::UserPtr& get_user() const { return mUser; }
+			void set_user(const SporeNet::UserPtr& user) { mUser = user; }
 
 			const auto& get_request() const { return mParser.GetDocument(); }
 
@@ -65,7 +58,7 @@ namespace Blaze {
 
 			std::vector<DataBuffer> mWriteBuffers;
 
-			Game::UserPtr mUser;
+			SporeNet::UserPtr mUser;
 
 			ClientData mData;
 			

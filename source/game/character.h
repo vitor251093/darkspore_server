@@ -10,21 +10,16 @@ namespace Game {
 	// Character
 	class Character {
 		public:
-			using Ptr = std::shared_ptr<Object>;
-
 			Character();
 			~Character();
 
 		protected:
-			Object::Ptr mObject;
+			ObjectPtr mObject;
 
-			float mHealth = 100.f;
-			float mMaxHealth = 100.f;
-			float mPower = 100.f;
-			float mMaxPower = 100.f;
-
-			friend class ObjectManager;
+			RakNet::labsCharacter mData;
 	};
+
+	using CharacterPtr = std::shared_ptr<Character>;
 }
 
 #endif

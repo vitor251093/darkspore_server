@@ -1,11 +1,13 @@
 
 // Include
 #include "creature.h"
-#include <algorithm>
+
 #include "../utils/functions.h"
 #include "../repository/template.h"
 #include "../repository/userpart.h"
 #include "config.h"
+
+#include <algorithm>
 
 // Game
 namespace Game {
@@ -183,14 +185,14 @@ namespace Game {
 
 		for (const auto& creatureNode : creatures) {
 			decltype(auto) creature = mCreatures.emplace_back();
-			creature.ReadXml(creatureNode);
+			creature->ReadXml(creatureNode);
 		}
 	}
 
 	void Creatures::WriteSmallXml(pugi::xml_node& node) const {
 		if (auto creatures = node.append_child("creatures")) {
 			for (const auto& creature : mCreatures) {
-				creature.WriteSmallXml(creatures);
+				creature->WriteSmallXml(creatures);
 			}
 		}
 	}
@@ -198,7 +200,7 @@ namespace Game {
 	void Creatures::WriteXml(pugi::xml_node& node) const {
 		if (auto creatures = node.append_child("creatures")) {
 			for (const auto& creature : mCreatures) {
-				creature.WriteXml(creatures, 0);
+				creature->WriteXml(creatures, 0);
 			}
 		}
 	}
@@ -208,14 +210,14 @@ namespace Game {
 		mCreatures.clear();
 		for (auto& creatureNode : object.GetArray()) {
 			decltype(auto) creature = mCreatures.emplace_back();
-			creature.ReadJson(creatureNode);
+			creature->ReadJson(creatureNode);
 		}
 	}
 
 	rapidjson::Value Creatures::WriteJson(rapidjson::Document::AllocatorType& allocator) const { 
 		rapidjson::Value value = utils::json::NewArray();
 		for (const auto& creature : mCreatures) {
-			rapidjson::Value creatureNode = creature.WriteJson(allocator);
+			rapidjson::Value creatureNode = creature->WriteJson(allocator);
 			utils::json::Add(value, creatureNode, allocator);
 		}
 		return value;
@@ -223,24 +225,27 @@ namespace Game {
 
 	void Creatures::Add(uint32_t templateId) {
 		for (const auto& creature : mCreatures) {
-			if (creature.nounId == templateId) {
+			if (creature->nounId == templateId) {
 				return;
 			}
 		}
 
-		decltype(auto) creature = mCreatures.emplace_back();
-		creature.id = mCreatures.size() + 1;
-		creature.nounId = templateId;
+		auto creature = std::make_shared<Creature>();
+
+		creature->id = static_cast<uint32_t>(mCreatures.size() + 1);
+		creature->nounId = templateId;
+
+		mCreatures.push_back(std::move(creature));
 	}
 
 	void Creatures::Add(Creature creature) {
 		mCreatures.emplace_back(creature);
 	}
 
-	Creature* Creatures::Get(size_t creatureId) {
-		for (auto& creature : mCreatures) {
-			if (creature.id == creatureId) {
-				return &creature;
+	Creature::Ptr Creatures::Get(size_t creatureId) const {
+		for (const auto& creature : mCreatures) {
+			if (creature->id == creatureId) {
+				return creature;
 			}
 		}
 		return nullptr;

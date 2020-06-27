@@ -3,7 +3,11 @@
 #include "authcomponent.h"
 #include "usersessioncomponent.h"
 
+#include "sporenet/instance.h"
+#include "sporenet/user.h"
+
 #include "../../repository/user.h"
+
 #include "blaze/client.h"
 #include "blaze/functions.h"
 #include "utils/functions.h"
@@ -361,15 +365,15 @@ namespace Blaze {
 	void AuthComponent::Parse(Client* client, const Header& header) {
 		switch (static_cast<PacketID>(header.command)) {
 			case PacketID::ListUserEntitlements2: ListUserEntitlements(client, header);  break;
-			case PacketID::GetAuthToken:		  GetAuthToken(client, header);          break;
-			case PacketID::Login:				  Login(client, header);				 break;
-			case PacketID::AcceptTOS:			  AcceptTOS(client, header);			 break;
-			case PacketID::GetTOSInfo:			  GetTOSInfo(client, header);			 break;
+			case PacketID::GetAuthToken:          GetAuthToken(client, header);          break;
+			case PacketID::Login:                 Login(client, header);                 break;
+			case PacketID::AcceptTOS:             AcceptTOS(client, header);             break;
+			case PacketID::GetTOSInfo:            GetTOSInfo(client, header);            break;
 			case PacketID::GetTermsAndConditions: GetTermsAndConditions(client, header); break;
-			case PacketID::GetPrivacyPolicy:	  GetPrivacyPolicy(client, header);		 break;
-			case PacketID::SilentLogin:			  SilentLogin(client, header);			 break;
-			case PacketID::Logout:				  Logout(client, header);				 break;
-			case PacketID::LoginPersona:		  LoginPersona(client, header);			 break;
+			case PacketID::GetPrivacyPolicy:      GetPrivacyPolicy(client, header);      break;
+			case PacketID::SilentLogin:           SilentLogin(client, header);           break;
+			case PacketID::Logout:                Logout(client, header);                break;
+			case PacketID::LoginPersona:          LoginPersona(client, header);          break;
 
 			default:
 				logger::error("Unknown auth command: " + header.command);
@@ -378,6 +382,8 @@ namespace Blaze {
 	}
 
 	void AuthComponent::SendAuthToken(Client* client, const std::string& token) {
+		client->get_user()->set_auth_token(token);
+
 		TDF::Packet packet;
 		packet.put_string("AUTH", token);
 
