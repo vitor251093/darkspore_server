@@ -15,8 +15,5 @@ add_subdirectory(/work/libs/pugixml-1.10)
 target_link_libraries(recap_server pugixml)
 
 # RapidJSON
-set(RapidJSON_DIR /work/libs/rapidjson-1.1.0)
-find_package(RapidJSON)
-include_directories(${RapidJSON_INCLUDE_DIR})
-link_directories(${RapidJSON_LIBRARY_DIR})
-target_link_libraries(recap_server ${RapidJSON_LIBRARIES} )
+add_subdirectory(/work/libs/rapidjson-1.1.0)
+target_link_libraries(recap_server RapidJSON)
