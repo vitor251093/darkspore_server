@@ -322,11 +322,22 @@ ASALocalRun/
 # MSBuild Binary and Structured Log
 *.binlog
 
+# CMake
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
 
-# Project specific
+# Project specific (libs)
+libs/boost_1_70_0/
+libs/pugixml-1.10/docs/
+libs/pugixml-1.10/libpugixml.dll
+libs/pugixml-1.10/libpugixml.dll.a
+libs/pugixml-1.10/pugixml.pc
+!libs/raknet-3.902-mod/
+
+# Project specific (build)
 build/storage/users/
 build/storage/user_parts.xml
-libs/boost_1_70_0/
-!libs/raknet-3.902-mod/
 build/darkspore_server.iobj
 build/darkspore_server.ipdb
