@@ -20,3 +20,11 @@ set(RapidJSON_INCLUDE_DIRS libs/rapidjson-1.1.0/include)
 add_subdirectory(libs/rapidjson-1.1.0)
 target_link_libraries(recap_server ${RapidJSON_LIBRARIES})
 include_directories(${RapidJSON_INCLUDE_DIRS})
+
+# OpenSSL
+set(OpenSSL_INCLUDE_DIR libs/openssl-1.1.1b/include)
+set(OpenSSL_LIBRARY_DIR libs/openssl-1.1.1b/lib)
+find_package(OpenSSL)
+include_directories(${OpenSSL_INCLUDE_DIR})
+link_directories(${OpenSSL_LIBRARY_DIR})
+target_link_libraries(recap_server ${OpenSSL_LIBRARIES} )
