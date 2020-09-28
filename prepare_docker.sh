@@ -1,4 +1,7 @@
-docker run --rm dockcross/windows-shared-x64 > ./dockcross-windows-shared-x64
+cd docker
+docker build -t recap_builder .
+docker run recap_builder > ../recap_builder
+chmod +x ../recap_builder 
+cd ..
 
-chmod +x ./dockcross-windows-shared-x64 
-./dockcross-windows-shared-x64 bash -c './prepare.sh'
+./recap_builder bash -c './prepare.sh'
