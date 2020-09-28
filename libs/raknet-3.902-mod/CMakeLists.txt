@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0)
 
 IF(WIN32 AND NOT UNIX)
 	set(CMAKE_SUPPRESS_REGENERATION TRUE) #Gets rid of ZERO_CHECK 
@@ -35,7 +35,7 @@ ELSE(WIN32 AND NOT UNIX)
 	set(WIN32NOTUNIX "FALSE" CACHE INTERNAL "HIDDEN" FORCE)
 ENDIF(WIN32 AND NOT UNIX)
 
-project(RakNet)
+project(RakNet VERSION 3.902)
 set (PS3ENABLED FALSE)
 if( NOT APPLE )
 # check 64 bit
@@ -85,5 +85,5 @@ ENDIF(WIN32 AND NOT UNIX)
 
 set(RAKNETHEADERFILES ${RakNet_SOURCE_DIR}/Source)
 
-add_subdirectory(DependentExtensions)
-add_subdirectory(Samples)
+#add_subdirectory(DependentExtensions)
+#add_subdirectory(Samples)

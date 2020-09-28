@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 2.6)
-project(LibStatic)
+cmake_minimum_required(VERSION 3.0)
+project(LibStatic VERSION 3.902)
 
 FILE(GLOB ALL_HEADER_SRCS ${RakNet_SOURCE_DIR}/Source/*.h)
 FILE(GLOB ALL_CPP_SRCS ${RakNet_SOURCE_DIR}/Source/*.cpp)
