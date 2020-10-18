@@ -1,1 +1,1 @@
-./recap_builder bash -c './run.sh'
+docker run -v $(pwd)/:/recap/ -it recap_builder
