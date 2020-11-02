@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  openssl:
+    build:
+      context: docker
+      dockerfile: DockerfileOpenssl
+    hostname: openssl
+    volumes:
+      - ./ssl:/usr/local/ssl
+  server:
+    build:
+      context: docker
+      dockerfile: Dockerfile
+    hostname: server
+    volumes:
+      - .:/recap
+      - ./ssl:/usr/local/ssl
+    depends_on:
+      - openssl

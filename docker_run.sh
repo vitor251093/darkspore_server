@@ -1,1 +1,0 @@
-docker run -v $(pwd)/:/recap/ -it recap_builder

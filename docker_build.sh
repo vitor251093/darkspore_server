@@ -1,2 +1,2 @@
-cd docker
-docker build -t recap_builder .
+docker-compose build
+docker-compose up
