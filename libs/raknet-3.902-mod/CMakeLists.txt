@@ -46,13 +46,15 @@ else(  CMAKE_SIZEOF_VOID_P MATCHES "4")
 endif(  CMAKE_SIZEOF_VOID_P MATCHES "4")
 
 # check endianness
-include( TestBigEndian )
-test_big_endian( HAVE_BIG_ENDIAN )
-if( HAVE_BIG_ENDIAN )
-  set( HAVE_BIG_ENDIAN 1 )
-else( HAVE_BIG_ENDIAN )
-  set( HAVE_BIG_ENDIAN 0 )
-endif( HAVE_BIG_ENDIAN )
+set( HAVE_BIG_ENDIAN 0 )
+# include( TestBigEndian )
+# test_big_endian( HAVE_BIG_ENDIAN )
+# if( HAVE_BIG_ENDIAN )
+#   set( HAVE_BIG_ENDIAN 1 )
+# else( HAVE_BIG_ENDIAN )
+#   set( HAVE_BIG_ENDIAN 0 )
+# endif( HAVE_BIG_ENDIAN )
+
 endif( NOT APPLE )
 
 IF (WIN32 AND NOT UNIX)

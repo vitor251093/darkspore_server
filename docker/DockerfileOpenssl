@@ -3,9 +3,13 @@
 
 FROM rwgrim/msys2-cross
 
+VOLUME ["/usr/local/ssl"]
+
 WORKDIR /recap
 COPY install-openssl.sh install-openssl.sh
 
 RUN pacman --root /windows -Syu --noconfirm cmake
 
 RUN bash ./install-openssl.sh
+
+ENTRYPOINT bash
